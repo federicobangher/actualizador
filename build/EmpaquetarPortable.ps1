@@ -3,16 +3,17 @@
     Arma la versión portable (no se instala): dist\Actualizador-<versión>-portable.7z
 
 .DESCRIPTION
-    Publica la ventana y la consola como un solo .exe cada una, con .NET 8 adentro (el equipo no necesita nada instalado),
-    y les agrega:
+    Publica la ventana como un solo .exe, con .NET 8 adentro (el equipo no necesita nada instalado), y le agrega:
         Actualizador.portable   el archivo que las hace portables (guardan todo en la carpeta «Datos», al lado)
         LEEME.txt               cómo se usa la portable
         SHA256SUMS.txt          el hash de cada archivo
     No lleva el aviso de la revisión programada (Actualizador.Aviso.exe) ni los scripts de instalación: la portable no
     programa tareas ni se registra en el equipo.
 
-    Antes de comprimir, prueba la consola recién armada («Actualizador.Cli.exe version» tiene que decir «portable») y que
-    la ventana pida permiso de administrador.
+    2.0.39 (pedido del usuario: «la idea es que pese lo menos posible»): sin la consola (Actualizador.Cli.exe, 35 MB: la ventana
+    no la usa; está en la versión instalada) y sin las bibliotecas nativas de WPF (*_cor3.dll, 8 MB: Actualizador es WinForms).
+    Antes de comprimir, abre de verdad la ventana armada («Actualizador.exe --comprobar-arranque»: arranca .NET y WinForms, crea
+    una ventana sin mostrarla y dice su versión y dónde guarda los datos) y comprueba que pida permiso de administrador.
 
     Comprime con 7-Zip si está instalado (.7z); si no, en .zip.
 
@@ -47,16 +48,23 @@ if (-not $SinPruebas) { Invoke-Pruebas -Raiz $raiz -Configuracion 'Release' }
 Write-Paso "Publicando Actualizador $version portable en $armado"
 if (Test-Path -LiteralPath $armado) { Remove-Item -LiteralPath $armado -Recurse -Force }
 New-Item -ItemType Directory -Path $armado -Force | Out-Null
-foreach ($p in @('Actualizador.App', 'Actualizador.Cli')) {
+foreach ($p in @('Actualizador.App')) {
     $csproj = Join-Path $raiz "src\$p\$p.csproj"
-    # Un solo .exe por programa, con .NET adentro (comprimido). Las bibliotecas nativas que hubiera quedan al lado y NO se
-    # extraen a %TEMP%: el programa corre como administrador y la carpeta temporal la puede escribir el usuario.
+    # Un solo .exe, con .NET adentro (comprimido). Las bibliotecas nativas que hubiera quedan al lado y NO se extraen a %TEMP%:
+    # el programa corre como administrador y la carpeta temporal la puede escribir el usuario. QuitarNativosWpf: ver el .csproj.
     Invoke-DotNet @('publish', $csproj, '-c', 'Release', '-f', 'net8.0-windows', '-r', 'win-x64', '--self-contained:true', '-o', $armado, '-nologo',
                     '-p:PublishSingleFile=true', '-p:EnableCompressionInSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=false',
-                    '-p:DebugType=embedded', '-p:PublishReadyToRun=false')
+                    '-p:DebugType=embedded', '-p:PublishReadyToRun=false', '-p:QuitarNativosWpf=true')
 }
-foreach ($exe in @('Actualizador.exe', 'Actualizador.Cli.exe', 'fuentes-oficiales.json')) {
+foreach ($exe in @('Actualizador.exe', 'fuentes-oficiales.json')) {
     if (-not (Test-Path -LiteralPath (Join-Path $armado $exe))) { throw "Falta $exe en $armado después de publicar." }
+}
+$wpf = @(Get-ChildItem -LiteralPath $armado -Filter '*_cor3.dll' -File -ErrorAction SilentlyContinue)
+if ($wpf.Count -gt 0) {
+    # No se borran a mano: si quedaron, .NET los tiene anotados y la ventana no arrancaría sin ellos.
+    Write-Host "Quedaron $($wpf.Count) bibliotecas de WPF (no se pudieron quitar al publicar): van en la entrega." -ForegroundColor Yellow
+} else {
+    Write-Host 'Sin las bibliotecas nativas de WPF.'
 }
 
 if ($hayFirma) {
@@ -93,29 +101,36 @@ if ($texto -notmatch 'requestedExecutionLevel\s+level="requireAdministrator"') {
 }
 Write-Host 'La ventana pide permiso de administrador.'
 
-# La consola no pide administrador: se ejecuta de verdad desde la carpeta armada.
-$consola = Join-Path $armado 'Actualizador.Cli.exe'
-$antes = $ErrorActionPreference
-$ErrorActionPreference = 'Continue'
-try {
-    $salida = @(& $consola 'version' 2>&1 | ForEach-Object { [string]$_ })
-    $codigo = $LASTEXITCODE
-} catch {
-    $salida = @([string]$_)
-    $codigo = -1
-} finally { $ErrorActionPreference = $antes }
-$todo = $salida -join ' '
-$salida | ForEach-Object { Write-Host "  $_" }
-if ($codigo -ne 0 -or $todo -notmatch [regex]::Escape("Actualizador $version (portable)")) {
-    if ($todo -match '0x800711C|directiva de control de aplicaciones|Application Control policy') {
-        Write-Host ''
-        Write-Host (Get-TextoSmartAppControl) -ForegroundColor Yellow
-        throw 'Windows bloqueó la portable recién armada (Smart App Control o Control de aplicaciones).'
+# 2.0.39: se abre de verdad la ventana armada (sin la consola, que ya no va). Pide administrador: se prueba si este PowerShell ya lo es
+# (sin preguntar nada) o en GitHub (los equipos de GitHub no tienen UAC). Si no, avisa y sigue: la prueba de GitHub es la que vale.
+$esAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if ($esAdmin -or $env:GITHUB_ACTIONS -eq 'true') {
+    $informe = Join-Path ([IO.Path]::GetTempPath()) ("actualizador-arranque-" + [Guid]::NewGuid().ToString('N') + '.txt')
+    $antes = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $proc = Start-Process -FilePath $ventana -ArgumentList @('--comprobar-arranque', ('"' + $informe + '"')) -Wait -PassThru
+        $codigo = $proc.ExitCode
+    } catch {
+        Write-Host "  $_"
+        $codigo = -1
+    } finally { $ErrorActionPreference = $antes }
+    $todo = ''
+    if (Test-Path -LiteralPath $informe) { $todo = [IO.File]::ReadAllText($informe, [Text.Encoding]::UTF8); Remove-Item -LiteralPath $informe -Force }
+    $todo -split "`r?`n" | Where-Object { $_ } | ForEach-Object { Write-Host "  $_" }
+    if ($codigo -ne 0 -or $todo -notmatch [regex]::Escape("Actualizador $version (portable)")) {
+        if ($todo -match '0x800711C|directiva de control de aplicaciones|Application Control policy') {
+            Write-Host ''
+            Write-Host (Get-TextoSmartAppControl) -ForegroundColor Yellow
+            throw 'Windows bloqueó la portable recién armada (Smart App Control o Control de aplicaciones).'
+        }
+        throw "La ventana de la portable no arrancó bien (código $codigo). No se entrega."
     }
-    throw "La consola de la portable no arrancó bien (código $codigo). No se entrega."
-}
-if ($todo -notmatch [regex]::Escape((Join-Path $armado 'Datos'))) {
-    throw 'La consola de la portable no guarda sus datos en la carpeta «Datos» de al lado. No se entrega.'
+    if ($todo -notmatch [regex]::Escape((Join-Path $armado 'Datos'))) {
+        throw 'La portable no guarda sus datos en la carpeta «Datos» de al lado. No se entrega.'
+    }
+} else {
+    Write-Host 'La prueba de arranque necesita PowerShell como administrador: se omite (en GitHub se hace siempre).' -ForegroundColor Yellow
 }
 # Lo que dejó la prueba no va en la entrega.
 $datos = Join-Path $armado 'Datos'

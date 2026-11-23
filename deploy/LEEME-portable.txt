@@ -9,13 +9,11 @@ USAR
   Actualizador.exe        la ventana. Pide permiso de administrador (UAC) cada vez que se abre.
                           «Buscar actualizaciones», marcar lo que quieras («Marcar todo») y
                           «Actualizar».
-  Actualizador.Cli.exe    la consola, para scripts:
-      Actualizador.Cli buscar
-      Actualizador.Cli actualizar --tipos programas,controladores --cerrar-programas
-      Actualizador.Cli ayuda
 
-  Cada .exe trae .NET 8 adentro: el equipo no necesita nada instalado. Dejá juntos todos los
-  archivos de esta carpeta (Actualizador.portable es el que la hace portable).
+  Actualizador.exe trae .NET 8 adentro: el equipo no necesita nada instalado. Dejá juntos todos
+  los archivos de esta carpeta (Actualizador.portable es el que la hace portable).
+  Para que pese lo menos posible, la portable no trae la consola (Actualizador.Cli.exe, para
+  scripts): está en la versión que se instala.
 
 DÓNDE GUARDA LAS COSAS
   Todo queda en la carpeta «Datos», al lado de Actualizador.exe:

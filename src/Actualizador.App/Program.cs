@@ -14,6 +14,8 @@ namespace Actualizador.App
         [STAThread]
         static int Main(string[] args)
         {
+            // 2.0.39: «Actualizador.exe --comprobar-arranque informe.txt» (lo usa EmpaquetarPortable.ps1 antes de entregar la portable).
+            if (args != null && args.Length == 2 && args[0] == "--comprobar-arranque") return CheckStartup(args[1]);
             AppInfo.HardenProcess();
             Log.Init(AppInfo.LogDirectory, "gui");
             TextEncodings.EnsureRegistered();   // páginas de códigos de Windows (850, 1252…) en .NET 8
@@ -38,6 +40,17 @@ namespace Actualizador.App
                 if (AppInfo.IsPortable)
                     Log.Info("Versión portable en " + AppInfo.ProgramDirectory + ". Datos: " + AppInfo.DataDirectory + "; de este equipo: " + AppInfo.MachineDataDirectory + ".");
                 if (AppInfo.PortableNote != null) Log.Warn(AppInfo.PortableNote);
+                if (AppInfo.IsPortable)
+                {
+                    // 2.0.39: lo que trajeron versiones anteriores y esta ya no usa (la consola, las bibliotecas de WPF): la actualización
+                    // sola copia encima sin borrar, así que se quita acá. Sólo esos nombres, y sólo si su SHA256SUMS.txt no los lista.
+                    try
+                    {
+                        var removed = PortableLayout.RemoveObsolete(AppInfo.ProgramDirectory);
+                        if (removed.Count > 0) Log.Info("Portable: se borraron archivos que esta versión ya no usa: " + string.Join(", ", removed.ToArray()) + ".");
+                    }
+                    catch (Exception ex) { Log.Info("Portable: no se pudieron borrar archivos viejos: " + ex.Message); }
+                }
                 Application.Run(new MainForm(GuiSettings.Load(), args));
                 return 0;
             }
@@ -50,6 +63,32 @@ namespace Actualizador.App
         }
 
         /// <summary>Último recurso: que el error se vea en vez de cerrar en silencio.</summary>
+        /// <summary>
+        /// 2.0.39: prueba de arranque de la portable recién armada, sin mostrar nada: carga .NET y WinForms (sin las bibliotecas de WPF que
+        /// ya no lleva), crea una ventana sin mostrarla y escribe en <paramref name="report"/> la versión y dónde guarda los datos. 0 si anduvo.
+        /// </summary>
+        static int CheckStartup(string report)
+        {
+            if (string.IsNullOrEmpty(report) || !report.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)) return 2;
+            try
+            {
+                Application.EnableVisualStyles();
+                using (var f = new Form())
+                {
+                    IntPtr h = f.Handle;
+                    if (h == IntPtr.Zero) throw new InvalidOperationException("no se pudo crear la ventana");
+                }
+                File.WriteAllText(report, AppInfo.Name + " " + AppInfo.Version + (AppInfo.IsPortable ? " (portable)" : "") + "\r\n" +
+                                          "Datos: " + AppInfo.DataDirectory + "\r\n", new UTF8Encoding(false));
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                try { File.WriteAllText(report, "ERROR: " + ex, new UTF8Encoding(false)); } catch { }
+                return 3;
+            }
+        }
+
         static void ShowFatal(string title, Exception ex)
         {
             try

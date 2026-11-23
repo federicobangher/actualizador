@@ -24,6 +24,19 @@
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.IO.Compression.FileSystem" />
   </ItemGroup>
+  <!--
+    2.0.39 (pedido del usuario: «la idea es que pese lo menos posible es el portable»): la portable (build\EmpaquetarPortable.ps1 pasa
+    -p:QuitarNativosWpf=true) no lleva las bibliotecas nativas de WPF que trae el paquete de escritorio de .NET (wpfgfx, PresentationNative,
+    PenImc, D3DCompiler_47 y vcruntime140 «_cor3», unos 8 MB): Actualizador es WinForms y no las carga. Se quitan antes de armar el
+    .deps.json, para que .NET no las espere.
+  -->
+  <Target Name="QuitarNativosWpf" AfterTargets="ResolveRuntimePackAssets" Condition="'$(QuitarNativosWpf)' == 'true'">
+    <ItemGroup>
+      <_NativoWpf Include="@(RuntimePackAsset)" Condition="'%(RuntimePackAsset.Filename)' == 'wpfgfx_cor3' Or '%(RuntimePackAsset.Filename)' == 'PresentationNative_cor3' Or '%(RuntimePackAsset.Filename)' == 'PenImc_cor3' Or '%(RuntimePackAsset.Filename)' == 'D3DCompiler_47_cor3' Or '%(RuntimePackAsset.Filename)' == 'vcruntime140_cor3'" />
+      <RuntimePackAsset Remove="@(_NativoWpf)" />
+    </ItemGroup>
+    <Message Importance="high" Text="Portable: sin las bibliotecas nativas de WPF (@(_NativoWpf->'%(Filename)%(Extension)', ', '))." />
+  </Target>
   <ItemGroup>
     <ProjectReference Include="..\Actualizador.Core\Actualizador.Core.csproj" />
     <ProjectReference Include="..\Actualizador.Engine\Actualizador.Engine.csproj" />

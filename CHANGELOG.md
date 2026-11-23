@@ -1,5 +1,20 @@
 # Cambios
 
+## 2.0.39
+
+Pedido del usuario (23/11/2026, con captura de la carpeta de la portable): «para qué sirven esos 2 .exe, la idea es que pese lo menos
+posible es el portable».
+
+- **La portable pesa casi la mitad: unos 63 MB en lugar de 106.** No trae la consola (Actualizador.Cli.exe, 35 MB: la ventana no la usa;
+  sigue en la versión que se instala) ni las bibliotecas nativas de WPF que agregaba .NET (wpfgfx, PresentationNative, PenImc,
+  D3DCompiler_47 y vcruntime140 «_cor3», 8 MB: Actualizador es WinForms y no las carga). Se quitan al publicar, antes de armar el
+  .deps.json, así .NET no las espera. La actualización sola también baja menos.
+- **Al abrir, la portable borra lo que trajeron las anteriores y ya no usa** (la consola y esas bibliotecas): la actualización sola copia
+  encima sin borrar. Sólo esos nombres, y sólo si su SHA256SUMS.txt no los lista; «Datos» y cualquier otro archivo no se tocan.
+- Antes de entregar la portable se abre de verdad su ventana (Actualizador.exe --comprobar-arranque: carga .NET y WinForms, crea una
+  ventana sin mostrarla y dice su versión y dónde guarda los datos). Antes se probaba la consola.
+- Pruebas nuevas (Pruebas2039.cs).
+
 ## 2.0.38
 
 Relevamiento pedido por el usuario (23/11/2026) antes de presentar Actualizador en el trabajo, y primera prueba de la portable que se

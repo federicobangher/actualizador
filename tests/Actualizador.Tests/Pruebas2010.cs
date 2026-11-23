@@ -103,11 +103,11 @@ namespace Actualizador.Tests
             Check(!t.Contains("\n") || !Regex.IsMatch(t, "[^\r]\n"), s + ": CRLF");
             Check(t.Contains("'-f', 'net8.0-windows'") && t.Contains("'-r', 'win-x64'") && t.Contains("'--self-contained:true'"), s + ": .NET adentro, para Windows x64");
             Check(t.Contains("-p:PublishSingleFile=true") && t.Contains("-p:IncludeNativeLibrariesForSelfExtract=false"), s + ": un solo .exe, sin extraer nada a %TEMP%");
-            Check(Regex.IsMatch(t, @"foreach \(\$p in @\('Actualizador\.App', 'Actualizador\.Cli'\)\)"), s + ": ventana y consola");
+            Check(Regex.IsMatch(t, @"foreach \(\$p in @\('Actualizador\.App'\)\)"), s + ": la ventana (2.0.39: sin la consola, para que pese menos)");
             Check(!t.Contains("'Actualizador.Aviso'"), s + ": sin el aviso de la revisión programada");
             Check(t.Contains("'Actualizador.portable'") && AppInfo.PortableMarker == "Actualizador.portable", s + ": pone el marcador que lee AppInfo");
             Check(t.Contains("deploy\\LEEME-portable.txt") && File.Exists(Path.Combine(raiz, "deploy", "LEEME-portable.txt")), s + ": lleva el LEEME de la portable");
-            Check(t.Contains("& $consola 'version'") && t.Contains("(portable)"), s + ": prueba la consola armada antes de entregar");
+            Check(t.Contains("'--comprobar-arranque'") && t.Contains("(portable)"), s + ": abre la ventana armada antes de entregar (2.0.39)");
             Check(t.Contains("requireAdministrator"), s + ": comprueba que la ventana pida administrador");
             Check(t.Contains("Remove-Item -LiteralPath $datos"), s + ": lo que deja la prueba no va en la entrega");
             Check(t.Contains("SHA256SUMS.txt") && t.Contains("Find-7Zip") && t.Contains("$nombre.7z"), s + ": hashes y .7z");

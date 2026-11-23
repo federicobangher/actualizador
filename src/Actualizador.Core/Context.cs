@@ -7,7 +7,7 @@ namespace Actualizador.Core
     public static class AppInfo
     {
         public const string Name = "Actualizador";
-        public const string Version = "2.0.38";
+        public const string Version = "2.0.39";
         const string BaseTitle = "Actualizador — programas, controladores y Windows";
 
         /// <summary>
@@ -133,7 +133,7 @@ namespace Actualizador.Core
     /// <summary>
     /// 2.0.10: dónde guarda sus cosas la versión portable (funciones puras: se prueban sin Windows).
     /// <code>
-    /// Actualizador.exe, Actualizador.Cli.exe, Actualizador.portable
+    /// Actualizador.exe, Actualizador.portable   (2.0.39: sin Actualizador.Cli.exe)
     /// Datos\opciones.json, fuentes.json…           (del técnico: valen en todos los equipos)
     /// Datos\equipos\PC-VENTAS\historial.jsonl, ignorados.json, logs\, diagnosticos\   (de cada equipo)
     /// </code>
@@ -146,6 +146,48 @@ namespace Actualizador.Core
         public static string DataDirectory(string programDirectory)
         {
             return Path.Combine(programDirectory ?? "", DataFolder);
+        }
+
+        /// <summary>
+        /// 2.0.39 (pedido del usuario: «la idea es que pese lo menos posible es el portable»): lo que traían las portables anteriores y la
+        /// 2.0.39 ya no lleva: la consola (35 MB) y las bibliotecas nativas de WPF (8 MB).
+        /// </summary>
+        public static readonly string[] ObsoleteFiles =
+        {
+            "Actualizador.Cli.exe", "wpfgfx_cor3.dll", "PresentationNative_cor3.dll", "PenImc_cor3.dll", "D3DCompiler_47_cor3.dll", "vcruntime140_cor3.dll"
+        };
+
+        /// <summary>
+        /// Borra de la carpeta de la portable esos archivos si esta versión no los trae: no figuran en su SHA256SUMS.txt (que tiene que listar
+        /// Actualizador.exe; si no está o no es el de la portable, no se borra nada). Nunca toca «Datos» ni otro nombre. Devuelve lo borrado.
+        /// </summary>
+        public static System.Collections.Generic.List<string> RemoveObsolete(string programDirectory)
+        {
+            var removed = new System.Collections.Generic.List<string>();
+            if (string.IsNullOrEmpty(programDirectory)) return removed;
+            string sums = Path.Combine(programDirectory, "SHA256SUMS.txt");
+            if (!File.Exists(sums)) return removed;
+            var listed = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string line in File.ReadAllLines(sums))
+            {
+                string t = line.Trim();
+                int i = t.IndexOf("  ", StringComparison.Ordinal);
+                if (i > 0) listed.Add(t.Substring(i + 2).Trim().TrimStart('*'));
+            }
+            if (!listed.Contains("Actualizador.exe")) return removed;
+            foreach (string name in ObsoleteFiles)
+            {
+                if (listed.Contains(name)) continue;
+                string p = Path.Combine(programDirectory, name);
+                try
+                {
+                    if (!File.Exists(p) || (File.GetAttributes(p) & FileAttributes.ReparsePoint) != 0) continue;
+                    File.Delete(p);
+                    removed.Add(name);
+                }
+                catch { }
+            }
+            return removed;
         }
 
         /// <summary>Datos\equipos\NOMBRE: el nombre del equipo sin caracteres que no van en un nombre de carpeta.</summary>

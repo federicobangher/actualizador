@@ -55,7 +55,7 @@ Hace falta el **SDK de .NET 8** sólo en el equipo donde se compila (`winget ins
 ```
 powershell -ExecutionPolicy Bypass -File build\Build.ps1         # compila y corre las pruebas
 powershell -ExecutionPolicy Bypass -File build\Publish.ps1       # publish\Actualizador (con .NET adentro)
-powershell -ExecutionPolicy Bypass -File build\Empaquetar.ps1    # dist\Actualizador-2.0.38.7z para los equipos (.zip sin 7-Zip)
+powershell -ExecutionPolicy Bypass -File build\Empaquetar.ps1    # dist\Actualizador-2.0.39.7z para los equipos (.zip sin 7-Zip)
 Instalar.cmd                                                     # publica (si hace falta) e instala en este equipo
 Instalar.cmd /quitar                                             # desinstala (también: Configuración › Aplicaciones, o Más › Desinstalar)
 Publicar.cmd                                                     # publica esta versión en GitHub: los equipos se actualizan solos
@@ -73,18 +73,19 @@ Firma de código: `build\Publish.ps1 -CertificadoHuella <huella>` (o `-Pfx archi
 Además de la que se instala, una que **no se instala**: para llevar en un pendrive y usar equipo por equipo.
 
 ```
-Portable.cmd                                                     # dist\Actualizador-2.0.38-portable.7z (o .zip sin 7-Zip)
+Portable.cmd                                                     # dist\Actualizador-2.0.39-portable.7z (o .zip sin 7-Zip)
 powershell -ExecutionPolicy Bypass -File build\EmpaquetarPortable.ps1 -CertificadoHuella <huella>   # firmada
 ```
 
-- `Actualizador.exe` (ventana) y `Actualizador.Cli.exe` (consola), **un solo archivo cada uno con .NET 8 adentro**: el
-  equipo no necesita nada instalado. Lo que la hace portable es el archivo `Actualizador.portable` que va al lado.
+- `Actualizador.exe` (la ventana), **un solo archivo con .NET 8 adentro**: el equipo no necesita nada instalado. Lo que la hace
+  portable es el archivo `Actualizador.portable` que va al lado. Desde la 2.0.39, para que pese lo menos posible, no trae la consola
+  (`Actualizador.Cli.exe`, está en la instalada) ni las bibliotecas nativas de WPF (`*_cor3.dll`): unos 63 MB en lugar de 106.
 - Guarda todo en la carpeta `Datos` de al lado: las opciones del técnico en `Datos\` y lo de cada equipo (historial,
   ignoradas, registros, diagnósticos) en `Datos\equipos\NOMBRE-DEL-EQUIPO\`. Si ahí no se puede escribir (CD, pendrive
   protegido), usa `%LOCALAPPDATA%\Actualizador` como la instalada.
 - Respeta la política de la empresa y deja el registro de cambios y el Visor de eventos en el equipo, como la instalada.
 - No se registra en Aplicaciones ni en el menú Inicio (se quita borrando la carpeta) y no programa revisiones automáticas.
-- Antes de comprimir, el script prueba la consola armada y que la ventana pida administrador. Detalle en
+- Antes de comprimir, el script abre la ventana armada (`--comprobar-arranque`, sin mostrarla) y comprueba que pida administrador. Detalle en
   `deploy\LEEME-portable.txt` (va como LEEME.txt adentro de la portable).
 
 Arquitectura y decisiones: [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md). Cambios: [CHANGELOG.md](CHANGELOG.md).
