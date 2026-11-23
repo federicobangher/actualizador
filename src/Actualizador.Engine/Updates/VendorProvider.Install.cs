@@ -639,8 +639,23 @@ namespace Actualizador.Updates
                     string exe, args;
                     bool visible = false;
                     string log = null;
+                    // 2.0.40: instaladores que no se pueden ejecutar en silencio (Npcap gratuito): directamente con su ventana. Sin nadie frente a
+                    // la pantalla (consola, revisión programada) o si la política no lo permite, no se abren: quedarían esperando un clic.
+                    var policyNow = UpdateManager.PolicyForTests ?? Policy.Current;
+                    bool windowAllowed = !Unattended && policyNow.AllowInteractiveInstallers;
+                    string windowOnly = kind == InstallerKind.Msi ? null
+                                      : InstallerRules.WindowOnly(plan.Program != null ? plan.Program.Name : c.Name, lead != null ? lead.WingetId : null)
+                                        ?? InstallerRules.WindowOnly(c.Name, null);
+                    if (windowOnly != null && !Interactive && !windowAllowed)
+                    {
+                        InstallerSupport.Fail(c, char.ToUpperInvariant(windowOnly[0]) + windowOnly.Substring(1) + ": " +
+                                                 (Unattended ? "sin nadie frente a la pantalla no se abre su instalador. Actualizalo desde la ventana de Actualizador: se abre su instalador y se completa con unos clics"
+                                                             : "la política de la empresa no permite instaladores con ventana"));
+                        return;
+                    }
+                    if (windowOnly != null) Log.Info(c.Name + ": " + windowOnly + ": se abre su instalador con su ventana");
                     // 2.0.17: con el manifiesto de winget, los mismos interruptores que usaría winget (silencioso, Custom y Upgrade).
-                    WingetInstaller manifest = lead != null && lead.Winget != null && lead.Winget.IsMsi == (kind == InstallerKind.Msi) ? lead.Winget : null;
+                    WingetInstaller manifest = windowOnly == null && lead != null && lead.Winget != null && lead.Winget.IsMsi == (kind == InstallerKind.Msi) ? lead.Winget : null;
                     string manifestArgs = null;
                     if (manifest != null)
                     {
@@ -665,14 +680,14 @@ namespace Actualizador.Updates
                     else
                     {
                         exe = file;
-                        string silent = check != null && check.ShowInstaller ? null
+                        string silent = (check != null && check.ShowInstaller) || windowOnly != null ? null
                                       : check != null && check.SilentArgs != null ? check.SilentArgs : InstallerRules.SilentArgs(kind);
                         // Instalador de otro tipo (InstallShield, WiX…) sin interruptores conocidos: con «Mostrar la ventana de cada instalador»
                         // se abre con su ventana (ya está verificado: mismo firmante que lo instalado); si no, no se adivina.
                         // 2.0.17: de la página oficial y ya verificado: se abre con su ventana (dos o tres clics) en vez de mandar a
                         // la página a bajarlo a mano. Sólo si la política permite instaladores con ventana.
-                        bool showAnyway = check == null && silent == null && !Interactive && plan.SitePage != null && !Unattended &&
-                                          (UpdateManager.PolicyForTests ?? Policy.Current).AllowInteractiveInstallers;
+                        bool showAnyway = windowOnly != null ||
+                                          (check == null && silent == null && !Interactive && plan.SitePage != null && windowAllowed);
                         if (check == null && silent == null && !Interactive && !showAnyway)
                         {
                             InstallerSupport.Fail(c, "«" + Path.GetFileName(file) + "» no es un instalador que se pueda ejecutar en silencio (Inno Setup, NSIS o MSI). " +
@@ -688,18 +703,38 @@ namespace Actualizador.Updates
                     Log.Info(c.Name + ": instalador verificado (" + how + "; tipo " + InstallerRules.KindText(kind) + ")");
                     ctx.Report("Instalando " + c.Name + " " + plan.Latest + " (instalador oficial verificado)…" + (visible ? " Completá la instalación en su ventana." : ""));
                     InstallerSupport.Progress(c, changed, visible ? "Instalando: completá la instalación en su ventana…" : "Instalando (instalador oficial verificado)…");
-                    Log.Info("Instalador de " + c.Name + ": " + Path.GetFileName(exe) + " " + args);
-                    ProcResult r;
-                    if (plan.RunAsUser && ctx.IsAdmin)
+                    Func<string, bool, ProcResult> run = delegate(string runArgs, bool runVisible)
                     {
-                        Log.Info(c.Name + ": está instalado sólo para el usuario: el instalador se ejecuta como el usuario, sin elevar");
-                        r = RunAsUser(exe, args, file, log, hold, visible);
-                    }
-                    else r = RunInstallerForTests != null ? RunInstallerForTests(exe, args) : ProcessRunner.RunInstaller(exe, args, 45 * 60 * 1000, BrowserProvider.InstallerEnvironment(dir), dir, hold);
+                        Log.Info("Instalador de " + c.Name + ": " + Path.GetFileName(exe) + " " + runArgs);
+                        if (plan.RunAsUser && ctx.IsAdmin)
+                        {
+                            Log.Info(c.Name + ": está instalado sólo para el usuario: el instalador se ejecuta como el usuario, sin elevar");
+                            return RunAsUser(exe, runArgs, file, log, hold, runVisible);
+                        }
+                        return RunInstallerForTests != null ? RunInstallerForTests(exe, runArgs) : ProcessRunner.RunInstaller(exe, runArgs, 45 * 60 * 1000, BrowserProvider.InstallerEnvironment(dir), dir, hold);
+                    };
+                    ProcResult r = run(args, visible);
                     Log.Info("Instalador de " + c.Name + " terminó: " + r.Describe());
                     if (!r.Started) { InstallerSupport.Fail(c, "No se pudo ejecutar el instalador: " + r.Describe()); return; }
                     plan.InstallerRan = true;
                     if (r.TimedOut) { InstallerSupport.Fail(c, "El instalador no terminó en 45 minutos"); return; }
+                    // 2.0.40: en silencio, el instalador se negó y no hizo nada (NSIS, código 2): se abre una vez con su ventana, en lugar de
+                    // dejar la fila en error y pedir que se marque «Mostrar la ventana de cada instalador» y se vuelva a empezar.
+                    bool windowed = visible;
+                    if (!visible && kind != InstallerKind.Msi && InstallerRules.RefusedSilent(kind, r.ExitCode) && windowAllowed &&
+                        (manifest == null || !WingetRules.InterpretExit(manifest, r.ExitCode).Success))
+                    {
+                        Log.Info(c.Name + ": el instalador no aceptó instalarse en silencio (código " + r.ExitCode + "): se abre con su ventana");
+                        ctx.Report("Instalando " + c.Name + " " + plan.Latest + ": no acepta instalarse en silencio; completá la instalación en su ventana.");
+                        InstallerSupport.Progress(c, changed, "Instalando: no acepta instalarse en silencio; completá la instalación en su ventana…");
+                        string winArgs = check != null && plan.Machine && !string.IsNullOrEmpty(check.MachineArgs) ? check.MachineArgs : "";
+                        r = run(winArgs, true);
+                        Log.Info("Instalador de " + c.Name + " (con su ventana) terminó: " + r.Describe());
+                        if (!r.Started) { InstallerSupport.Fail(c, "No se pudo ejecutar el instalador: " + r.Describe()); return; }
+                        if (r.TimedOut) { InstallerSupport.Fail(c, "El instalador no terminó en 45 minutos"); return; }
+                        windowed = true;
+                        manifest = null;
+                    }
                     if (manifest != null)
                     {
                         // Los códigos de salida, como los interpreta winget (InstallerSuccessCodes y ExpectedReturnCodes del manifiesto).
@@ -717,14 +752,18 @@ namespace Actualizador.Updates
                     // 3010/1641 es «instalado, falta reiniciar» también en los EXE que lo propagan (Inno usa 0-8 y
                     // NSIS 0-2: no se confunde con otra cosa).
                     bool reboot = r.ExitCode == 3010 || r.ExitCode == 1641;
-                    if (r.ExitCode != 0 && !reboot && check != null && check.ShowInstaller)
+                    if (r.ExitCode != 0 && !reboot && ((check != null && check.ShowInstaller) || windowOnly != null || windowed))
                     {
                         // 2.0.13: el instalador de NVIDIA devuelve 1 cuando hace falta reiniciar, y otros códigos propios: manda la versión
-                        // que quedó instalada.
+                        // que quedó instalada. 2.0.40: lo mismo con cualquier instalador que se abrió con su ventana (Npcap pide verificar la
+                        // instalación en vez de fiarse del código).
                         string now = InstalledVersionNow(ctx, plan);
-                        if (VersionUtil.Parse(now) != null && !VersionUtil.IsNewer(plan.Latest, now)) { Confirm(ctx, c, plan, r.ExitCode == 1, how); return; }
-                        InstallerSupport.Fail(c, "El instalador de " + check.Product + " terminó (código " + r.ExitCode + ") sin dejar instalada la " + plan.Latest +
-                                                 (VersionUtil.Parse(now) != null ? " (sigue la " + now + ")" : "") + ". Si lo cerraste antes de terminar, volvé a actualizar");
+                        if (VersionUtil.Parse(now) != null && !VersionUtil.IsNewer(plan.Latest, now)) { Confirm(ctx, c, plan, check != null && check.ShowInstaller && r.ExitCode == 1, how); return; }
+                        string product = check != null ? check.Product : c.Name;
+                        bool cancelled = (kind == InstallerKind.Nsis && r.ExitCode == 1) || (kind == InstallerKind.Inno && r.ExitCode == 5);
+                        InstallerSupport.Fail(c, "El instalador de " + product + " " + (cancelled ? "se cerró (código " + r.ExitCode + ", cancelado en su ventana)" : "terminó (código " + r.ExitCode + ")") +
+                                                 " sin dejar instalada la " + plan.Latest + (VersionUtil.Parse(now) != null ? " (sigue la " + now + ")" : "") +
+                                                 ". Si lo cerraste antes de terminar, volvé a actualizar" + (windowOnly != null ? " (" + windowOnly + ": se completa en su ventana)" : ""));
                         return;
                     }
                     if (r.ExitCode != 0 && !reboot)
@@ -800,6 +839,7 @@ namespace Actualizador.Updates
                 }
             if (code == 1638 || code == 5100) return code + ": ya hay instalada una versión igual o más nueva";
             if (kind == InstallerKind.Nsis && code == 1) return "1: se canceló en el instalador";
+            if (kind == InstallerKind.Nsis && code == 2) return "2: el propio instalador interrumpió la instalación (no acepta instalarse en silencio, pidió confirmar algo o hay otra edición instalada). Probá con «Mostrar la ventana de cada instalador»";
             if (kind == InstallerKind.Inno && code == 5) return "5: se canceló en el instalador";
             return "el código " + code + "; suele significar que no acepta instalarse en silencio o que el programa está abierto. Probá con «Mostrar la ventana de cada instalador»";
         }

@@ -6,6 +6,7 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using Actualizador.Core;
+using Actualizador.Core.Security;
 using Actualizador.Inventory;
 
 namespace Actualizador.Updates
@@ -85,214 +86,237 @@ namespace Actualizador.Updates
         public void Install(UpdateContext ctx, List<UpdateCandidate> items, Action<UpdateCandidate> changed)
         {
             string native = ctx.Os != null ? ctx.Os.NativeArchitecture : "";
-            foreach (var c in InstallOrder(items))
+            bool interactiveAsked = Interactive;
+            try
             {
-                if (ctx.CancelRequested) { c.Status = UpdateStatus.Pendiente; c.Result = "Cancelada antes de empezar"; changed(c); continue; }
-                var w = c.ProviderTag as WingetRow;
-                if (w == null || w.IdTruncated) { c.Status = UpdateStatus.Fallida; c.Result = "Identificador no utilizable"; changed(c); continue; }
-                if (!IsSafeId(w.Id) || (w.Source.Length > 0 && !IsSafeSource(w.Source)))
+                foreach (var c in InstallOrder(items))
                 {
-                    // El texto viene de la salida de winget: no se le permite colar argumentos.
-                    c.Status = UpdateStatus.Fallida;
-                    c.Result = "Identificador con caracteres no permitidos: no se ejecuta";
-                    Log.Warn("Se rechazó el identificador de winget " + w.Id + " / origen " + w.Source);
-                    changed(c);
-                    continue;
-                }
-                c.Status = UpdateStatus.Instalando;
-                c.Result = "";
-                changed(c);
-                ctx.Report("Actualizando " + c.Name + " (" + w.Id + ") a " + c.AvailableVersion + "…");
-                // 2.0.20: paquete aprovisionado para todos los usuarios.
-                if (w.MachineScope) { InstallMachine(ctx, c, w, changed); changed(c); continue; }
-                // 2.0.20: Roblox (su paquete de winget pasó a «portable» y winget ya no puede actualizar lo instalado).
-                if (RobloxPlayer.Handles(w)) { RobloxPlayer.Install(ctx, c, w, Interactive, changed); changed(c); continue; }
-                bool store = w.Source.Equals("msstore", StringComparison.OrdinalIgnoreCase);
-                // Una copia portable no la toca el instalador oficial: no se cierran sus procesos ni se comparan sus archivos.
-                var prog = store || w.PortableCopy ? null : FindProgram(ctx.Programs, w.Name, w.Version);
-                string before = c.InstalledVersion;
-                string expected = PinnedVersion(w);
-                // Versión de los archivos ANTES de instalar: para saber después si cambiaron aunque el registro no.
-                string filesBefore = "";
-                if (prog != null) { try { string ignored; filesBefore = FilesVersion(prog, before, out ignored); } catch { filesBefore = ""; } }
-
-                // Abierto en segundo plano (Epic Games Launcher): su MSI termina con 1603.
-                string openNames = store ? null : HandleRunning(ctx, c, prog, changed);
-
-                // La arquitectura instalada: winget elige la del equipo, y sobre un TeamViewer de 32 bits
-                // el instalador de 64 aborta con el código 2. Se le pide la misma que está instalada.
-                string archArg = null, installedArch = "";
-                if (Modern && !store)
-                {
-                    installedArch = ProgramRules.DetectArchitecture(prog, native, BrowserProvider.PeArch);
-                    archArg = ProgramRules.WingetArchitecture(installedArch, native);
-                    if (archArg != null) Log.Info(c.Name + ": está instalado en " + archArg + " (el equipo es " + native + "): se actualiza con --architecture " + archArg);
-                }
-                // Nunca una versión más vieja que la ofrecida o que la instalada (WinRAR 7.01 sobre la 7.23).
-                Func<string, string> guard = delegate(string line) { return DowngradeGuard(line, w.Id, c.AvailableVersion, before); };
-                bool pinned = expected != null;
-                string baseArgs = UpgradeArgs(w, "upgrade", pinned);
-                string args = baseArgs + (archArg != null ? " --architecture " + archArg : "");
-                var last = new StringBuilder();
-                ProcResult r = RunUpgrade(args, last, guard);
-                int attempts = 1;
-                string directNote = null;
-                uint code = unchecked((uint)r.ExitCode);
-
-                // Con --version, winget responde «no hay actualización aplicable» (0x8A15002B) o «ningún
-                // instalador aplicable» (0x8A150010) por cualquier motivo, incluso cuando la versión nueva usa
-                // otra tecnología de instalación (sin --version eso es 0x8A15008E y tiene arreglo). Se repite
-                // sin fijar la versión: winget dice la causa real, y la guardia sigue impidiendo una más vieja.
-                if (pinned && IsNotApplicable(code) && Usable(r, ctx))
-                {
-                    ProcResult free = RunUpgrade(UpgradeArgs(w, "upgrade", false) + (archArg != null ? " --architecture " + archArg : ""), last, guard);
-                    if (free.Aborted && !ctx.CancelRequested)
-                        Log.Info(c.Name + ": sin --version winget elegía una versión más vieja (" + free.AbortReason + "); se conserva la respuesta anterior");
-                    else
+                    Interactive = interactiveAsked;
+                    if (ctx.CancelRequested) { c.Status = UpdateStatus.Pendiente; c.Result = "Cancelada antes de empezar"; changed(c); continue; }
+                    var w = c.ProviderTag as WingetRow;
+                    if (w == null || w.IdTruncated) { c.Status = UpdateStatus.Fallida; c.Result = "Identificador no utilizable"; changed(c); continue; }
+                    if (!IsSafeId(w.Id) || (w.Source.Length > 0 && !IsSafeSource(w.Source)))
                     {
-                        Log.Info(c.Name + ": sin --version winget respondió " + free.Describe());
-                        r = free;
-                        code = unchecked((uint)r.ExitCode);
-                        pinned = false;
-                        baseArgs = UpgradeArgs(w, "upgrade", false);
-                        args = baseArgs + (archArg != null ? " --architecture " + archArg : "");
-                    }
-                }
-
-                // Con «--scope» winget no encontró un instalador para ese alcance (el manifiesto no lo declara): se repite sin él.
-                if (w.InstallInsteadOfUpgrade && w.Scope.Length > 0 && Usable(r, ctx) && IsNotApplicable(code))
-                {
-                    Log.Info(c.Name + ": winget no tiene un instalador declarado para el alcance «" + w.Scope + "»; se repite sin --scope");
-                    w.Scope = "";
-                    baseArgs = UpgradeArgs(w, "upgrade", pinned);
-                    args = baseArgs + (archArg != null ? " --architecture " + archArg : "");
-                    r = RunUpgrade(args, last, guard);
-                    code = unchecked((uint)r.ExitCode);
-                }
-
-                // El instalador no admite correr como administrador (Spotify y otras apps «sólo para el usuario»): con
-                // Actualizador elevado no se actualizaban nunca. Se repite lo mismo como el usuario, sin elevar.
-                if (ctx.IsAdmin && Usable(r, ctx) && ProhibitsElevation(code) && !store)
-                {
-                    ctx.Report(c.Name + ": su instalador no admite ejecutarse como administrador; se actualiza como tu usuario, sin elevar…");
-                    InstallerSupport.Progress(c, changed, "Actualizando sin elevar (el instalador no admite administrador)…");
-                    var u = RunUnelevated(args);
-                    if (u.Started)
-                    {
-                        // Sin el código (no se encontró el proceso): se da por terminado y lo decide la versión instalada (ConfirmInstalled).
-                        if (u.ExitCode == Unelevated.UnknownExit) u.ExitCode = 0;
-                        r = u;
-                        code = unchecked((uint)r.ExitCode);
-                        lock (last) { last.Length = 0; last.Append("winget sin elevar: " + r.Describe()); }
-                        Log.Info(c.Name + ": winget sin elevar terminó: " + r.Describe());
-                    }
-                    else
-                    {
-                        directNote = "tampoco se pudo ejecutar sin elevar: " + u.StartError + ". Abrí Actualizador sin «Ejecutar como administrador» y actualizalo desde ahí";
-                        Log.Warn(c.Name + ": " + directNote);
-                    }
-                }
-
-                // Sin instalador para esa arquitectura: sólo un MSI se puede pasar a la que elija winget
-                // (reemplaza al instalado). Un EXE dejaría dos copias o abortaría: se explica y no se toca.
-                if (archArg != null && Usable(r, ctx) && IsNotApplicable(code))
-                {
-                    if (!ProgramRules.CanSwitchArchitecture(prog))
-                    {
+                        // El texto viene de la salida de winget: no se le permite colar argumentos.
                         c.Status = UpdateStatus.Fallida;
-                        c.Result = ProgramRules.ArchitectureBlockedText(expected ?? c.AvailableVersion, installedArch, native, w.Id);
-                        Log.Warn(c.Name + ": " + c.Result);
+                        c.Result = "Identificador con caracteres no permitidos: no se ejecuta";
+                        Log.Warn("Se rechazó el identificador de winget " + w.Id + " / origen " + w.Source);
                         changed(c);
                         continue;
                     }
-                    ctx.Report(c.Name + ": winget no publica la versión nueva para " + archArg + "; se instala la que elija winget (es MSI: reemplaza a la instalada)…");
-                    archArg = null;
-                    pinned = expected != null;
-                    baseArgs = UpgradeArgs(w, "upgrade", pinned);
-                    args = baseArgs;
-                    r = RunUpgrade(args, last, guard);
-                    code = unchecked((uint)r.ExitCode);
+                    // 2.0.40: un instalador que no se puede ejecutar en silencio (Npcap gratuito) se abre directamente con su ventana
+                    // (winget --interactive). Sin nadie frente a la pantalla o sin permiso de la política, no: quedaría esperando un clic.
+                    string windowOnly = Interactive ? null : InstallerRules.WindowOnly(w.Name, w.Id);
+                    if (windowOnly != null)
+                    {
+                        if (Unattended || !(UpdateManager.PolicyForTests ?? Policy.Current).AllowInteractiveInstallers)
+                        {
+                            c.Status = UpdateStatus.Fallida;
+                            c.Result = char.ToUpperInvariant(windowOnly[0]) + windowOnly.Substring(1) + ": " +
+                                       (Unattended ? "sin nadie frente a la pantalla no se abre su instalador. Actualizalo desde la ventana de Actualizador: se abre su instalador y se completa con unos clics"
+                                                   : "la política de la empresa no permite instaladores con ventana");
+                            changed(c);
+                            continue;
+                        }
+                        Log.Info(c.Name + ": " + windowOnly + ": se instala con la ventana de su instalador (winget --interactive)");
+                        Interactive = true;
+                    }
+                    c.Status = UpdateStatus.Instalando;
+                    c.Result = windowOnly != null ? "Completá la instalación en la ventana de su instalador" : "";
+                    changed(c);
+                    ctx.Report("Actualizando " + c.Name + " (" + w.Id + ") a " + c.AvailableVersion + "…");
+                    // 2.0.20: paquete aprovisionado para todos los usuarios.
+                    if (w.MachineScope) { InstallMachine(ctx, c, w, changed); changed(c); continue; }
+                    // 2.0.20: Roblox (su paquete de winget pasó a «portable» y winget ya no puede actualizar lo instalado).
+                    if (RobloxPlayer.Handles(w)) { RobloxPlayer.Install(ctx, c, w, Interactive, changed); changed(c); continue; }
+                    bool store = w.Source.Equals("msstore", StringComparison.OrdinalIgnoreCase);
+                    // Una copia portable no la toca el instalador oficial: no se cierran sus procesos ni se comparan sus archivos.
+                    var prog = store || w.PortableCopy ? null : FindProgram(ctx.Programs, w.Name, w.Version);
+                    string before = c.InstalledVersion;
+                    string expected = PinnedVersion(w);
+                    // Versión de los archivos ANTES de instalar: para saber después si cambiaron aunque el registro no.
+                    string filesBefore = "";
+                    if (prog != null) { try { string ignored; filesBefore = FilesVersion(prog, before, out ignored); } catch { filesBefore = ""; } }
+
+                    // Abierto en segundo plano (Epic Games Launcher): su MSI termina con 1603.
+                    string openNames = store ? null : HandleRunning(ctx, c, prog, changed);
+
+                    // La arquitectura instalada: winget elige la del equipo, y sobre un TeamViewer de 32 bits
+                    // el instalador de 64 aborta con el código 2. Se le pide la misma que está instalada.
+                    string archArg = null, installedArch = "";
+                    if (Modern && !store)
+                    {
+                        installedArch = ProgramRules.DetectArchitecture(prog, native, BrowserProvider.PeArch);
+                        archArg = ProgramRules.WingetArchitecture(installedArch, native);
+                        if (archArg != null) Log.Info(c.Name + ": está instalado en " + archArg + " (el equipo es " + native + "): se actualiza con --architecture " + archArg);
+                    }
+                    // Nunca una versión más vieja que la ofrecida o que la instalada (WinRAR 7.01 sobre la 7.23).
+                    Func<string, string> guard = delegate(string line) { return DowngradeGuard(line, w.Id, c.AvailableVersion, before); };
+                    bool pinned = expected != null;
+                    string baseArgs = UpgradeArgs(w, "upgrade", pinned);
+                    string args = baseArgs + (archArg != null ? " --architecture " + archArg : "");
+                    var last = new StringBuilder();
+                    ProcResult r = RunUpgrade(args, last, guard);
+                    int attempts = 1;
+                    string directNote = null;
+                    uint code = unchecked((uint)r.ExitCode);
+
+                    // Con --version, winget responde «no hay actualización aplicable» (0x8A15002B) o «ningún
+                    // instalador aplicable» (0x8A150010) por cualquier motivo, incluso cuando la versión nueva usa
+                    // otra tecnología de instalación (sin --version eso es 0x8A15008E y tiene arreglo). Se repite
+                    // sin fijar la versión: winget dice la causa real, y la guardia sigue impidiendo una más vieja.
                     if (pinned && IsNotApplicable(code) && Usable(r, ctx))
                     {
-                        ProcResult free = RunUpgrade(UpgradeArgs(w, "upgrade", false), last, guard);
-                        if (!free.Aborted || ctx.CancelRequested)
+                        ProcResult free = RunUpgrade(UpgradeArgs(w, "upgrade", false) + (archArg != null ? " --architecture " + archArg : ""), last, guard);
+                        if (free.Aborted && !ctx.CancelRequested)
+                            Log.Info(c.Name + ": sin --version winget elegía una versión más vieja (" + free.AbortReason + "); se conserva la respuesta anterior");
+                        else
                         {
+                            Log.Info(c.Name + ": sin --version winget respondió " + free.Describe());
                             r = free;
                             code = unchecked((uint)r.ExitCode);
                             pinned = false;
                             baseArgs = UpgradeArgs(w, "upgrade", false);
-                            args = baseArgs;
+                            args = baseArgs + (archArg != null ? " --architecture " + archArg : "");
                         }
                     }
-                }
 
-                // La versión nueva usa otro tipo de instalador (Double Commander): se reinstala, verificada.
-                if (r.Started && !r.TimedOut && !r.Aborted && !ctx.CancelRequested && code == WingetDirect.TechMismatch)
-                {
-                    ctx.Report(c.Name + ": la versión nueva usa otro tipo de instalador; se reinstala (primero se descarga y verifica la nueva)…");
-                    string installArgs = UpgradeArgs(w, "install") + (archArg != null ? " --architecture " + archArg : "");
-                    DirectAttempt d;
-                    try { d = WingetDirect.TryReinstall(ctx, c, w, Interactive, changed, delegate { return RunUpgrade(installArgs, last, guard); }); }
-                    catch (OperationCanceledByUserException) { d = new DirectAttempt(); d.NotApplicable = "cancelada"; }
-                    if (d.Handled) { changed(c); continue; }
-                    directNote = d.NotApplicable;
-                    Log.Info(c.Name + ": reinstalación no disponible: " + directNote);
-                }
+                    // Con «--scope» winget no encontró un instalador para ese alcance (el manifiesto no lo declara): se repite sin él.
+                    if (w.InstallInsteadOfUpgrade && w.Scope.Length > 0 && Usable(r, ctx) && IsNotApplicable(code))
+                    {
+                        Log.Info(c.Name + ": winget no tiene un instalador declarado para el alcance «" + w.Scope + "»; se repite sin --scope");
+                        w.Scope = "";
+                        baseArgs = UpgradeArgs(w, "upgrade", pinned);
+                        args = baseArgs + (archArg != null ? " --architecture " + archArg : "");
+                        r = RunUpgrade(args, last, guard);
+                        code = unchecked((uint)r.ExitCode);
+                    }
 
-                // Hash viejo en el catálogo (GOM Player) o corte de red: se prueba el instalador oficial
-                // del mismo manifiesto, verificado, sin esperar más intentos de winget.
-                if (r.Started && !r.TimedOut && !r.Aborted && !ctx.CancelRequested && WingetDirect.Applies(code))
-                {
-                    ctx.Report(WingetDirect.Why(code, c.Name));
-                    DirectAttempt d;
-                    try { d = WingetDirect.TryInstall(ctx, c, w, r.Out + "\n" + r.Err, code, Interactive, changed); }
-                    catch (OperationCanceledByUserException) { d = new DirectAttempt(); d.NotApplicable = "cancelada"; }
-                    if (d.Handled) { changed(c); continue; }
-                    directNote = d.NotApplicable;
-                    Log.Info(c.Name + ": vía directa no disponible: " + directNote);
-                }
+                    // El instalador no admite correr como administrador (Spotify y otras apps «sólo para el usuario»): con
+                    // Actualizador elevado no se actualizaban nunca. Se repite lo mismo como el usuario, sin elevar.
+                    if (ctx.IsAdmin && Usable(r, ctx) && ProhibitsElevation(code) && !store)
+                    {
+                        ctx.Report(c.Name + ": su instalador no admite ejecutarse como administrador; se actualiza como tu usuario, sin elevar…");
+                        InstallerSupport.Progress(c, changed, "Actualizando sin elevar (el instalador no admite administrador)…");
+                        var u = RunUnelevated(args);
+                        if (u.Started)
+                        {
+                            // Sin el código (no se encontró el proceso): se da por terminado y lo decide la versión instalada (ConfirmInstalled).
+                            if (u.ExitCode == Unelevated.UnknownExit) u.ExitCode = 0;
+                            r = u;
+                            code = unchecked((uint)r.ExitCode);
+                            lock (last) { last.Length = 0; last.Append("winget sin elevar: " + r.Describe()); }
+                            Log.Info(c.Name + ": winget sin elevar terminó: " + r.Describe());
+                        }
+                        else
+                        {
+                            directNote = "tampoco se pudo ejecutar sin elevar: " + u.StartError + ". Abrí Actualizador sin «Ejecutar como administrador» y actualizalo desde ahí";
+                            Log.Warn(c.Name + ": " + directNote);
+                        }
+                    }
 
-                // Sigue sin haber un instalador aplicable: el manifiesto oficial dice por qué (alcance equipo/
-                // usuario, arquitectura, Windows mínimo). Si la única diferencia es el alcance de un instalador
-                // NSIS o Inno Setup (TeraBox instalado para el usuario y publicado «para el equipo»), winget no
-                // lo actualiza nunca, pero el instalador oficial sí: se usa ése, verificado con su SHA-256.
-                if (Usable(r, ctx) && IsNotApplicable(code))
-                {
-                    ctx.Report(c.Name + ": winget no tiene un instalador aplicable; se revisa su manifiesto oficial…");
-                    DirectAttempt d;
-                    try { d = WingetDirect.TryInstall(ctx, c, w, r.Out + "\n" + r.Err, code, Interactive, changed); }
-                    catch (OperationCanceledByUserException) { d = new DirectAttempt(); d.NotApplicable = "cancelada"; }
-                    if (d.Handled) { changed(c); continue; }
-                    directNote = d.NotApplicable;
-                    Log.Info(c.Name + ": sin instalador aplicable: " + directNote);
-                }
+                    // Sin instalador para esa arquitectura: sólo un MSI se puede pasar a la que elija winget
+                    // (reemplaza al instalado). Un EXE dejaría dos copias o abortaría: se explica y no se toca.
+                    if (archArg != null && Usable(r, ctx) && IsNotApplicable(code))
+                    {
+                        if (!ProgramRules.CanSwitchArchitecture(prog))
+                        {
+                            c.Status = UpdateStatus.Fallida;
+                            c.Result = ProgramRules.ArchitectureBlockedText(expected ?? c.AvailableVersion, installedArch, native, w.Id);
+                            Log.Warn(c.Name + ": " + c.Result);
+                            changed(c);
+                            continue;
+                        }
+                        ctx.Report(c.Name + ": winget no publica la versión nueva para " + archArg + "; se instala la que elija winget (es MSI: reemplaza a la instalada)…");
+                        archArg = null;
+                        pinned = expected != null;
+                        baseArgs = UpgradeArgs(w, "upgrade", pinned);
+                        args = baseArgs;
+                        r = RunUpgrade(args, last, guard);
+                        code = unchecked((uint)r.ExitCode);
+                        if (pinned && IsNotApplicable(code) && Usable(r, ctx))
+                        {
+                            ProcResult free = RunUpgrade(UpgradeArgs(w, "upgrade", false), last, guard);
+                            if (!free.Aborted || ctx.CancelRequested)
+                            {
+                                r = free;
+                                code = unchecked((uint)r.ExitCode);
+                                pinned = false;
+                                baseArgs = UpgradeArgs(w, "upgrade", false);
+                                args = baseArgs;
+                            }
+                        }
+                    }
 
-                // Sin vía directa, los cortes de red se reintentan con winget.
-                while (attempts < MaxAttempts && r.Started && !r.TimedOut && !r.Aborted && IsTransientNetwork(unchecked((uint)r.ExitCode)) && !ctx.CancelRequested)
-                {
-                    attempts++;
-                    ctx.Report("winget no pudo descargar " + c.Name + " (" + Describe(unchecked((uint)r.ExitCode)) + "); reintento " + attempts + " de " + MaxAttempts + " en 10 segundos…");
-                    c.Result = "Reintentando la descarga (" + attempts + " de " + MaxAttempts + ")";
+                    // La versión nueva usa otro tipo de instalador (Double Commander): se reinstala, verificada.
+                    if (r.Started && !r.TimedOut && !r.Aborted && !ctx.CancelRequested && code == WingetDirect.TechMismatch)
+                    {
+                        ctx.Report(c.Name + ": la versión nueva usa otro tipo de instalador; se reinstala (primero se descarga y verifica la nueva)…");
+                        string installArgs = UpgradeArgs(w, "install") + (archArg != null ? " --architecture " + archArg : "");
+                        DirectAttempt d;
+                        try { d = WingetDirect.TryReinstall(ctx, c, w, Interactive, changed, delegate { return RunUpgrade(installArgs, last, guard); }); }
+                        catch (OperationCanceledByUserException) { d = new DirectAttempt(); d.NotApplicable = "cancelada"; }
+                        if (d.Handled) { changed(c); continue; }
+                        directNote = d.NotApplicable;
+                        Log.Info(c.Name + ": reinstalación no disponible: " + directNote);
+                    }
+
+                    // Hash viejo en el catálogo (GOM Player) o corte de red: se prueba el instalador oficial
+                    // del mismo manifiesto, verificado, sin esperar más intentos de winget.
+                    if (r.Started && !r.TimedOut && !r.Aborted && !ctx.CancelRequested && WingetDirect.Applies(code))
+                    {
+                        ctx.Report(WingetDirect.Why(code, c.Name));
+                        DirectAttempt d;
+                        try { d = WingetDirect.TryInstall(ctx, c, w, r.Out + "\n" + r.Err, code, Interactive, changed); }
+                        catch (OperationCanceledByUserException) { d = new DirectAttempt(); d.NotApplicable = "cancelada"; }
+                        if (d.Handled) { changed(c); continue; }
+                        directNote = d.NotApplicable;
+                        Log.Info(c.Name + ": vía directa no disponible: " + directNote);
+                    }
+
+                    // Sigue sin haber un instalador aplicable: el manifiesto oficial dice por qué (alcance equipo/
+                    // usuario, arquitectura, Windows mínimo). Si la única diferencia es el alcance de un instalador
+                    // NSIS o Inno Setup (TeraBox instalado para el usuario y publicado «para el equipo»), winget no
+                    // lo actualiza nunca, pero el instalador oficial sí: se usa ése, verificado con su SHA-256.
+                    if (Usable(r, ctx) && IsNotApplicable(code))
+                    {
+                        ctx.Report(c.Name + ": winget no tiene un instalador aplicable; se revisa su manifiesto oficial…");
+                        DirectAttempt d;
+                        try { d = WingetDirect.TryInstall(ctx, c, w, r.Out + "\n" + r.Err, code, Interactive, changed); }
+                        catch (OperationCanceledByUserException) { d = new DirectAttempt(); d.NotApplicable = "cancelada"; }
+                        if (d.Handled) { changed(c); continue; }
+                        directNote = d.NotApplicable;
+                        Log.Info(c.Name + ": sin instalador aplicable: " + directNote);
+                    }
+
+                    // Sin vía directa, los cortes de red se reintentan con winget.
+                    while (attempts < MaxAttempts && r.Started && !r.TimedOut && !r.Aborted && IsTransientNetwork(unchecked((uint)r.ExitCode)) && !ctx.CancelRequested)
+                    {
+                        attempts++;
+                        ctx.Report("winget no pudo descargar " + c.Name + " (" + Describe(unchecked((uint)r.ExitCode)) + "); reintento " + attempts + " de " + MaxAttempts + " en 10 segundos…");
+                        c.Result = "Reintentando la descarga (" + attempts + " de " + MaxAttempts + ")";
+                        changed(c);
+                        for (int s = 0; s < 10 && !ctx.CancelRequested; s++) System.Threading.Thread.Sleep(1000);
+                        if (ctx.CancelRequested) break;
+                        r = RunUpgrade(args, last, guard);
+                    }
+                    string lastLine;
+                    lock (last) lastLine = last.ToString();
+                    // El instalador falló: la causa real está en el registro de Windows Installer que dejó winget.
+                    string diagnosis = "";
+                    if (r.Started && !r.TimedOut && !r.Aborted && r.ExitCode != 0 && InstallerExitCode(r.Out + " " + r.Err) != null)
+                        diagnosis = MsiLogAnalyzer.ExplainFromWingetOutput(r.Out + "\n" + r.Err);
+                    ApplyResult(c, r, lastLine, attempts, directNote, Interactive, diagnosis, openNames);
+                    if (c.Status == UpdateStatus.Fallida && !ctx.IsAdmin && !store && NeedsAdminHint(prog, code, r.Out + " " + r.Err))
+                        c.Result = c.Result.TrimEnd('.') + ". " + NotAdminHint;
+                    // winget se actualizó a sí mismo: su carpeta cambió.
+                    if (IsWingetItself(w.Id) && r.Started && RunForTests == null) RefreshExe("se actualizó App Installer");
+                    if ((c.Status == UpdateStatus.Instalada || c.Status == UpdateStatus.RequiereReinicio) && !store)
+                        ConfirmInstalled(ctx, c, w, before, c.AvailableVersion, pinned, prog, openNames, filesBefore);
                     changed(c);
-                    for (int s = 0; s < 10 && !ctx.CancelRequested; s++) System.Threading.Thread.Sleep(1000);
-                    if (ctx.CancelRequested) break;
-                    r = RunUpgrade(args, last, guard);
                 }
-                string lastLine;
-                lock (last) lastLine = last.ToString();
-                // El instalador falló: la causa real está en el registro de Windows Installer que dejó winget.
-                string diagnosis = "";
-                if (r.Started && !r.TimedOut && !r.Aborted && r.ExitCode != 0 && InstallerExitCode(r.Out + " " + r.Err) != null)
-                    diagnosis = MsiLogAnalyzer.ExplainFromWingetOutput(r.Out + "\n" + r.Err);
-                ApplyResult(c, r, lastLine, attempts, directNote, Interactive, diagnosis, openNames);
-                if (c.Status == UpdateStatus.Fallida && !ctx.IsAdmin && !store && NeedsAdminHint(prog, code, r.Out + " " + r.Err))
-                    c.Result = c.Result.TrimEnd('.') + ". " + NotAdminHint;
-                // winget se actualizó a sí mismo: su carpeta cambió.
-                if (IsWingetItself(w.Id) && r.Started && RunForTests == null) RefreshExe("se actualizó App Installer");
-                if ((c.Status == UpdateStatus.Instalada || c.Status == UpdateStatus.RequiereReinicio) && !store)
-                    ConfirmInstalled(ctx, c, w, before, c.AvailableVersion, pinned, prog, openNames, filesBefore);
-                changed(c);
             }
+            finally { Interactive = interactiveAsked; }
         }
 
         /// <summary>APPINSTALLER_CLI_ERROR_INSTALLER_PROHIBITS_ELEVATION: el instalador no admite correr como administrador.</summary>

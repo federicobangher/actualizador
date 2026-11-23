@@ -911,7 +911,7 @@ namespace Actualizador.Updates
             foreach (var p in providers)
             {
                 var wg = p as WingetProvider;
-                if (wg != null) { wg.Interactive = Interactive; wg.CloseRunning = CloseRunning; }
+                if (wg != null) { wg.Interactive = Interactive; wg.CloseRunning = CloseRunning; wg.Unattended = !string.Equals(Via, "interfaz", StringComparison.OrdinalIgnoreCase); }
                 var br = p as BrowserProvider;
                 if (br != null) br.Interactive = Interactive;
                 var vp = p as VendorProvider;

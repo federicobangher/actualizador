@@ -353,6 +353,12 @@ namespace Actualizador.Tests
             Run("la portable pesa menos: sin la consola ni las bibliotecas de WPF", TestPortableLiviana2039);
             Run("la portable borra lo que trajeron versiones anteriores y ya no usa", TestPortableBorraLoViejo2039);
             Run("versión 2.0.39", TestVersion2039);
+            // --- 2.0.40 (Pruebas2040.cs)
+            Run("Npcap y los instaladores que no aceptan el modo silencioso", TestReglasSinSilencio2040);
+            Run("Npcap 1.82 → 1.90 se instala con su ventana (la captura)", TestNpcapConSuVentana2040);
+            Run("un instalador que en silencio se niega (NSIS 2) se abre con su ventana", TestSeNiegaEnSilencioSeAbreConVentana2040);
+            Run("Npcap por winget: con --interactive, sólo esa fila", TestNpcapPorWinget2040);
+            Run("versión 2.0.40", TestVersion2040);
             Console.WriteLine();
             Console.WriteLine("Resultado: " + passed + " correctas, " + failed + " fallidas.");
             return failed == 0 ? 0 : 1;

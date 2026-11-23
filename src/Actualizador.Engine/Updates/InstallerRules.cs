@@ -117,5 +117,33 @@ namespace Actualizador.Updates
 
         /// <summary>Los interruptores del catálogo son fijos; igual se exige ASCII simple, sin comillas ni variables.</summary>
         public static bool IsSafeArgs(string args) { return args == null || SafeArgs.IsMatch(args); }
+
+        // 2.0.40 (captura del 23/11/2026, Npcap 1.82 → 1.90: «el instalador verificado devolvió el código 2»): la edición gratuita de
+        // Npcap no se instala en silencio; con /S muestra «Silent installation is only supported in Npcap OEM» y termina con 2. Sólo
+        // Npcap OEM (paga, se registra como «Npcap OEM») acepta /S.
+        static readonly Regex NpcapFree = new Regex(@"^Npcap(?:\s+v?\d[\d.]*)?$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        /// <summary>
+        /// 2.0.40: programas cuyo instalador oficial no se puede ejecutar en silencio (lo rechaza y aborta): se abren directamente con su
+        /// ventana, sin perder un intento. Devuelve el motivo (para el detalle y el registro) o null. <paramref name="wingetId"/> puede
+        /// faltar.
+        /// </summary>
+        public static string WindowOnly(string name, string wingetId)
+        {
+            string n = (name ?? "").Trim();
+            if (string.Equals((wingetId ?? "").Trim(), "Insecure.Npcap", StringComparison.OrdinalIgnoreCase) || NpcapFree.IsMatch(n))
+                return "la edición gratuita de Npcap no permite instalarse en silencio (sólo Npcap OEM, que es paga)";
+            return null;
+        }
+
+        /// <summary>
+        /// 2.0.40: ¿un código de salida que, en un instalador ejecutado EN SILENCIO, quiere decir que no hizo nada porque no acepta ese
+        /// modo? En NSIS, 2 es «interrumpido por el propio instalador» (Npcap gratuito, o un instalador que pide confirmar algo): con
+        /// su ventana se puede completar o, al menos, se ve qué pide.
+        /// </summary>
+        public static bool RefusedSilent(InstallerKind kind, int exitCode)
+        {
+            return kind == InstallerKind.Nsis && exitCode == 2;
+        }
     }
 }

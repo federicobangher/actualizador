@@ -1,5 +1,22 @@
 # Cambios
 
+## 2.0.40
+
+Captura del usuario (23/11/2026), «seguimos con los errores»: Npcap 1.82 → 1.90 «Falló la instalación»: «El instalador verificado
+devolvió el código 2; suele significar que no acepta instalarse en silencio…».
+
+- **Npcap se actualiza con la ventana de su instalador.** La edición gratuita de Npcap no se instala en silencio: con /S muestra «Silent
+  installation is only supported in Npcap OEM» y termina con el código 2 sin hacer nada (sólo Npcap OEM, que es paga, acepta /S). Ahora
+  Actualizador lo baja y verifica como siempre (página oficial, firma de Insecure.Com LLC) y abre directamente su instalador para
+  completarlo con unos clics, sin el intento en silencio que fallaba. Por winget, igual (--interactive sólo para esa fila). El resultado
+  se confirma por la versión que quedó instalada, como pide Npcap.
+- **Un instalador que en silencio se niega (NSIS, código 2) se abre una vez con su ventana** en lugar de dejar la fila en error y pedir
+  que se marque «Mostrar la ventana de cada instalador» y se vuelva a empezar.
+- Sin nadie frente a la pantalla (consola, revisión programada) o si la política no permite instaladores con ventana, no se abre: la fila
+  dice por qué y cómo hacerlo. Si se cancela en la ventana, la fila dice «cancelado en su ventana» y la versión que sigue.
+- El código 2 de NSIS se explica en la fila («el propio instalador interrumpió la instalación…»).
+- Pruebas nuevas (Pruebas2040.cs).
+
 ## 2.0.39
 
 Pedido del usuario (23/11/2026, con captura de la carpeta de la portable): «para qué sirven esos 2 .exe, la idea es que pese lo menos

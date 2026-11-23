@@ -23,6 +23,9 @@ namespace Actualizador.Updates
         /// <summary>Muestra las ventanas del instalador en vez de instalar en silencio.</summary>
         public bool Interactive;
 
+        /// <summary>2.0.40: sin nadie frente a la pantalla (consola, revisión programada): un instalador sin modo silencioso no se abre.</summary>
+        public bool Unattended;
+
         public string Name { get { return ProviderId; } }
 
         public string Unavailable(UpdateContext ctx)
