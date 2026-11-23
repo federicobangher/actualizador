@@ -8,7 +8,7 @@ namespace Actualizador.Tests
 {
     public static partial class Program
     {
-        /// <summary>GitHub arma y publica la versión solo, al subir la etiqueta v&lt;versión&gt;.</summary>
+        /// <summary>GitHub arma y publica la versión solo, cuando a main llega una versión que no está publicada.</summary>
         static void TestPublicaGitHub2036()
         {
             string raiz = Raiz();
@@ -17,11 +17,11 @@ namespace Actualizador.Tests
             Check(File.Exists(wf), "está el flujo de GitHub que publica");
             if (!File.Exists(wf)) return;
             string y = File.ReadAllText(wf, Encoding.UTF8);
-            Check(y.Contains("tags: ['v*']"), "se dispara con la etiqueta v<versión>");
+            Check(y.Contains("branches: [main]"), "se dispara al subir a main");
             Check(y.Contains("runs-on: windows-latest"), "se arma en Windows");
             Check(y.Contains("contents: write") && y.Contains("GH_TOKEN"), "puede publicar la versión");
             Check(y.Contains("Publicar.ps1") && y.Contains("-ConPruebas"), "la misma entrega que Publicar.cmd, con las pruebas");
-            Check(y.Contains("no coincide con la versión"), "no publica si la etiqueta no es la versión");
+            Check(y.Contains("gh release view") && y.Contains("publicada != 'true'"), "una versión ya publicada no se vuelve a publicar");
         }
 
         /// <summary>«Authentication complete» y «No se inició sesión»: gh termina con error si no está Git, aunque la sesión quedó.</summary>

@@ -1,18 +1,19 @@
 # 2.0.36 (pedido del usuario, 23/11/2026: «que no tenga que descargar nada, como Virtual Pet»).
-# Al subir una etiqueta v<versión> (por ejemplo v2.0.36), GitHub arma Actualizador en Windows, corre las pruebas y publica la
-# versión con build\Publicar.ps1: la misma entrega que arma Publicar.cmd en una PC. Los equipos la instalan solos al abrir.
+# Cuando a main llega una versión (Directory.Build.props) que todavía no está publicada, GitHub arma Actualizador en Windows,
+# corre las pruebas y la publica con build\Publicar.ps1: la misma entrega que arma Publicar.cmd en una PC (y crea la etiqueta
+# v<versión>). Los equipos la instalan solos al abrir. Si la versión ya está publicada, no hace nada.
 name: Publicar
 
 on:
   push:
-    tags: ['v*']
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: publicar-${{ github.ref }}
+  group: publicar
   cancel-in-progress: false
 
 jobs:
@@ -30,15 +31,21 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: La etiqueta coincide con la versión
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: ¿Ya está publicada esta versión?
+        id: version
         shell: powershell
         run: |
           [xml]$p = Get-Content -LiteralPath Directory.Build.props -Raw -Encoding UTF8
           $v = $p.Project.PropertyGroup | ForEach-Object { $_.Version } | Where-Object { $_ } | Select-Object -First 1
-          if ("v$v" -ne $env:GITHUB_REF_NAME) { throw "La etiqueta $env:GITHUB_REF_NAME no coincide con la versión $v (Directory.Build.props)." }
+          $ErrorActionPreference = 'Continue'
+          gh release view "v$v" --repo $env:GITHUB_REPOSITORY 2>&1 | Out-Null
+          $ya = ($LASTEXITCODE -eq 0)
+          if ($ya) { Write-Host "La versión v$v ya está publicada: no se hace nada." } else { Write-Host "Se publica la versión v$v." }
+          "publicada=$($ya.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          exit 0
 
       - name: Compilar, probar y publicar
+        if: steps.version.outputs.publicada != 'true'
         shell: powershell
         run: |
           & .\build\Publicar.ps1 -Repo $env:GITHUB_REPOSITORY -ConPruebas

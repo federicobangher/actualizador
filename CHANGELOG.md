@@ -4,8 +4,8 @@
 
 Pedido del usuario (23/11/2026): «que no tenga que descargar nada, como Virtual Pet».
 
-- **Las versiones nuevas se publican solas desde GitHub.** El código está en github.com/federicobangher/actualizador; al subir la etiqueta
-  v<versión>, GitHub arma Actualizador en Windows, corre las pruebas y publica la versión (la misma entrega que Publicar.cmd). Los
+- **Las versiones nuevas se publican solas desde GitHub.** El código está en github.com/federicobangher/actualizador; cuando llega una versión
+  que todavía no está publicada, GitHub arma Actualizador en Windows, corre las pruebas y publica la versión (la misma entrega que Publicar.cmd). Los
   equipos la instalan solos al abrir. Publicar.cmd sigue sirviendo para publicar desde una PC.
 - **Publicar.cmd decía «No se inició sesión en GitHub» después de «Authentication complete».** Al iniciar sesión, gh configura Git y, si
   Git no está instalado, termina con error aunque la sesión quedó iniciada. Ahora se comprueba la sesión, no el código de salida.
