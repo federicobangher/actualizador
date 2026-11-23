@@ -345,6 +345,10 @@ namespace Actualizador.Tests
             Run("la portable: bajar, verificar y preparar su entrega", TestPortablePrepara2037);
             Run("la portable: el guion que copia encima y la vuelve a abrir", TestGuionPortable2037);
             Run("versión 2.0.37", TestVersion2037);
+            // --- 2.0.38 (Pruebas2038.cs)
+            Run("relevamiento: la consulta de versión nueva de otra versión no se reusa", TestConsultaDeOtraVersion2038);
+            Run("relevamiento: los guiones salen de la carpeta bajada antes de abrir y borrar", TestGuionesSalenDeLaCarpeta2038);
+            Run("versión 2.0.38", TestVersion2038);
             Console.WriteLine();
             Console.WriteLine("Resultado: " + passed + " correctas, " + failed + " fallidas.");
             return failed == 0 ? 0 : 1;

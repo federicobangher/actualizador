@@ -239,6 +239,9 @@ namespace Actualizador.Updates
             return !last.HasValue || last.Value > now || (now - last.Value).TotalMinutes >= 60;
         }
 
+        /// <summary>Quién guarda la consulta: «2.0.38» o «2.0.38 portable».</summary>
+        static string Consultant { get { return AppInfo.Version + (AppInfo.IsPortable ? " portable" : ""); } }
+
         public static void Save(string path, Result r, string source)
         {
             try
@@ -251,6 +254,8 @@ namespace Actualizador.Updates
                 d["archivo"] = r.AssetUrl ?? "";
                 d["nombreArchivo"] = r.AssetName ?? "";
                 d["sha256"] = r.AssetSha256 ?? "";
+                // 2.0.38: quién consultó (versión y si es la portable): la consulta de otra versión no se reusa (ver Load).
+                d["consultadaPor"] = Consultant;
                 if (r.Error != null) d["error"] = r.Error;
                 if (!SafePaths.EnsureDataDirectory(Path.GetDirectoryName(path))) return;
                 AtomicFile.WriteAllText(path, Json.Serialize(d, true), new UTF8Encoding(false));
@@ -266,6 +271,10 @@ namespace Actualizador.Updates
                 if (!File.Exists(path)) return null;
                 object o = Json.Parse(File.ReadAllText(path, Encoding.UTF8));
                 if (!string.Equals((Json.Str(o, "fuente") ?? "").Trim(), (source ?? "").Trim(), StringComparison.OrdinalIgnoreCase)) return null;
+                // 2.0.38 (relevamiento): la última consulta la guardó otra versión (la de antes de actualizarse, a mano o sola) o la otra
+                // clase (instalada / portable): se vuelve a consultar. La 2.0.35 portable guardaba la entrega de la instalada; al pasar a la
+                // 2.0.37 a mano, durante una hora habría intentado instalarse con esa (y fallado). Y recién actualizada, se consulta enseguida.
+                if (!string.Equals(Json.Str(o, "consultadaPor") ?? "", Consultant, StringComparison.Ordinal)) return null;
                 var r = new Result();
                 DateTime d;
                 if (!DateTime.TryParse(Json.Str(o, "fecha"), CultureInfo.InvariantCulture, DateTimeStyles.None, out d)) return null;

@@ -160,12 +160,19 @@ namespace Actualizador.Updates
               .Append(stagedDir).Append("\\Actualizador\" > \"").Append(logFile).Append("\" 2>&1\r\n");
             // 2.0.35: el resultado, para que la próxima vez se sepa si salió bien (la redirección adelante: «echo 0> archivo» no anda).
             sb.Append(">\"").Append(ResultFile(logFile)).Append("\" echo %ERRORLEVEL%\r\n");
+            sb.Append(LeaveStaging);
             sb.Append("start \"\" \"").Append(installedExe).Append("\"\r\n");
             // Lo bajado ya no hace falta (queda el registro de la instalación y este guion, que pesan poco).
             sb.Append("rd /s /q \"").Append(stagedDir).Append("\" >nul 2>&1\r\n");
             sb.Append("del /q \"").Append(stagedDir).Append(".zip\" >nul 2>&1\r\n");
             return sb.ToString();
         }
+
+        /// <summary>
+        /// 2.0.38 (relevamiento): antes de abrir Actualizador y de borrar lo bajado, el guion sale de esa carpeta. Si no, Actualizador arrancaba
+        /// con su carpeta de trabajo ahí adentro y «rd /s /q» no podía borrarla (cmd tampoco: estaba parado en ella): quedaba en C:\Windows\Temp.
+        /// </summary>
+        const string LeaveStaging = "cd /d \"%SystemRoot%\\System32\"\r\n";
 
         /// <summary>La carpeta de la portable con las opciones, el historial y los registros: nunca se toca.</summary>
         public const string PortableDataFolder = "Datos";
@@ -191,6 +198,7 @@ namespace Actualizador.Updates
             sb.Append("set RC=%ERRORLEVEL%\r\n");
             sb.Append("if %RC% LSS 8 set RC=0\r\n");
             sb.Append(">\"").Append(ResultFile(logFile)).Append("\" echo %RC%\r\n");
+            sb.Append(LeaveStaging);
             sb.Append("start \"\" \"").Append(dir).Append("\\Actualizador.exe\"\r\n");
             sb.Append("rd /s /q \"").Append(stagedDir).Append("\" >nul 2>&1\r\n");
             sb.Append("del /q \"").Append(stagedDir).Append(".zip\" >nul 2>&1\r\n");

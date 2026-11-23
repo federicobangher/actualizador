@@ -1,5 +1,20 @@
 # Cambios
 
+## 2.0.38
+
+Relevamiento pedido por el usuario (23/11/2026) antes de presentar Actualizador en el trabajo, y primera prueba de la portable que se
+actualiza sola (2.0.37 → 2.0.38).
+
+- **Después de actualizarse, la búsqueda de versión nueva se hace enseguida.** La última consulta (se reusa una hora) la podía haber
+  guardado la versión anterior: la portable 2.0.35 guardaba la entrega de la instalada y, pasada a la 2.0.37 a mano, durante una hora
+  habría intentado instalarse con esa y fallado. Ahora la consulta guardada por otra versión, o por la otra clase (instalada o portable),
+  no se reusa.
+- **Lo bajado para actualizarse se borra.** Los guiones abrían Actualizador parados en la carpeta bajada: la nueva arrancaba con esa
+  carpeta como carpeta de trabajo y «rd /s /q» no podía borrarla (quedaban unos 60 a 90 MB en C:\Windows\Temp por actualización).
+  Ahora salen de ella antes de abrir y de borrar.
+- LEEME de la portable y README: la portable se actualiza sola; las versiones se publican solas desde GitHub.
+- Pruebas nuevas (Pruebas2038.cs).
+
 ## 2.0.37
 
 Pedido del usuario (23/11/2026, con captura): «en el portable se puede hacer que se actualice solo sin que se abra la página».

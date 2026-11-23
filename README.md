@@ -55,14 +55,16 @@ Hace falta el **SDK de .NET 8** sólo en el equipo donde se compila (`winget ins
 ```
 powershell -ExecutionPolicy Bypass -File build\Build.ps1         # compila y corre las pruebas
 powershell -ExecutionPolicy Bypass -File build\Publish.ps1       # publish\Actualizador (con .NET adentro)
-powershell -ExecutionPolicy Bypass -File build\Empaquetar.ps1    # dist\Actualizador-2.0.37.7z para los equipos (.zip sin 7-Zip)
+powershell -ExecutionPolicy Bypass -File build\Empaquetar.ps1    # dist\Actualizador-2.0.38.7z para los equipos (.zip sin 7-Zip)
 Instalar.cmd                                                     # publica (si hace falta) e instala en este equipo
 Instalar.cmd /quitar                                             # desinstala (también: Configuración › Aplicaciones, o Más › Desinstalar)
 Publicar.cmd                                                     # publica esta versión en GitHub: los equipos se actualizan solos
 ```
 
-**Actualización automática (2.0.32):** `Publicar.cmd` sube la versión a GitHub (`federicobangher/actualizador`). Cada equipo con
-la 2.0.32 o posterior la encuentra al abrir Actualizador, la baja, verifica su SHA-256, la instala en silencio y se vuelve a abrir.
+**Actualización automática (2.0.32):** cada versión se publica en GitHub (`federicobangher/actualizador`): sola, cuando llega a `main`
+una versión que todavía no está publicada (`.github/workflows/publicar.yml`, desde la 2.0.36), o con `Publicar.cmd` desde una PC. Cada
+equipo con la 2.0.32 o posterior la encuentra al abrir Actualizador, la baja, verifica su SHA-256, la instala en silencio y se vuelve a
+abrir. La portable también, desde la 2.0.37: copia los archivos nuevos en su carpeta sin tocar «Datos».
 
 Firma de código: `build\Publish.ps1 -CertificadoHuella <huella>` (o `-Pfx archivo.pfx`).
 
@@ -71,7 +73,7 @@ Firma de código: `build\Publish.ps1 -CertificadoHuella <huella>` (o `-Pfx archi
 Además de la que se instala, una que **no se instala**: para llevar en un pendrive y usar equipo por equipo.
 
 ```
-Portable.cmd                                                     # dist\Actualizador-2.0.37-portable.7z (o .zip sin 7-Zip)
+Portable.cmd                                                     # dist\Actualizador-2.0.38-portable.7z (o .zip sin 7-Zip)
 powershell -ExecutionPolicy Bypass -File build\EmpaquetarPortable.ps1 -CertificadoHuella <huella>   # firmada
 ```
 

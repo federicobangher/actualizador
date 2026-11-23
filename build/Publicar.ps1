@@ -7,7 +7,8 @@
       1. Arma la entrega (Empaquetar.ps1): dist\Actualizador-<versión>.7z, para instalar a mano.
       2. Arma también dist\Actualizador-<versión>.zip con su .sha256: es la que bajan los equipos (Windows abre .zip sin 7-Zip).
       3. Con GitHub CLI (gh): si falta lo instala con winget; si no iniciaste sesión, te la pide (una sola vez); si el proyecto
-         no existe, lo crea (público: sólo tiene las entregas compiladas, no el código).
+         no existe, lo crea (público).
+      Desde la 2.0.36 esto mismo corre solo en GitHub (.github/workflows/publicar.yml) cuando llega a main una versión nueva.
       4. Crea la versión «v<versión>» con las notas de CHANGELOG.md y sube los tres archivos (si ya existía, los reemplaza).
     Cada equipo con Actualizador 2.0.32 o posterior la encuentra al abrir (como mucho una consulta por hora), la baja, verifica
     el SHA-256, la instala en silencio y vuelve a abrir Actualizador.

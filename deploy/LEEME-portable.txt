@@ -40,9 +40,11 @@ LO QUE LA PORTABLE NO HACE
     vez no está). Para eso, instalá Actualizador con Instalar.cmd de la entrega común.
 
 VERSIÓN NUEVA
-  Cerrá Actualizador y descomprimí la nueva en lugar de esta carpeta. Podés conservar «Datos».
-  Si en Opciones indicás dónde se publican las versiones nuevas (una carpeta o GitHub), avisa
-  cuando hay una.
+  Se actualiza sola (desde la 2.0.37): al abrir, si hay una versión nueva en GitHub, la baja,
+  verifica su SHA-256, se cierra, copia los archivos nuevos en esta carpeta y se vuelve a abrir
+  (menos de un minuto). «Datos» no se toca. También: Más › Buscar actualización de Actualizador.
+  Si esta carpeta no se puede escribir (un pendrive protegido), avisa: cerrá Actualizador y
+  descomprimí la nueva en lugar de esta carpeta, conservando «Datos».
   Si venías usando la portable de SuperProgram (el nombre anterior), copiá su carpeta «Datos» al
   lado de Actualizador.exe: seguís con tus opciones y el historial de cada equipo.
 
