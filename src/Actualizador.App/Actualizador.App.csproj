@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- La ventana del actualizador (WinForms sobre .NET 8). -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFrameworks>net8.0-windows</TargetFrameworks>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationVisualStyles>true</ApplicationVisualStyles>
+    <AssemblyName>Actualizador</AssemblyName>
+    <RootNamespace>Actualizador.App</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <StartupObject>Actualizador.App.Program</StartupObject>
+  </PropertyGroup>
+  <!-- Verificación en Linux: la misma interfaz compilada para .NET Framework 4.8 contra Mono (capturas y pruebas sin Windows). -->
+  <PropertyGroup Condition="'$(SpVerify)' == 'true'">
+    <TargetFrameworks>net48</TargetFrameworks>
+    <UseWindowsForms>false</UseWindowsForms>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Actualizador.Core\Actualizador.Core.csproj" />
+    <ProjectReference Include="..\Actualizador.Engine\Actualizador.Engine.csproj" />
+    <!-- ExcludeFromSingleFile: en la portable (un solo .exe) queda al lado, editable, como en la instalada. -->
+    <None Include="..\..\res\fuentes-oficiales.json" Link="fuentes-oficiales.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+</Project>

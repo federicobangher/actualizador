@@ -1,0 +1,9 @@
+{"url":"https://api.github.com/repos/ejemplo/editor/releases/250000001","html_url":"https://github.com/ejemplo/editor/releases/tag/v2.4.1","id":250000001,"tag_name":"v2.4.1","target_commitish":"main","name":"Editor 2.4.1","draft":false,"prerelease":false,"created_at":"2026-09-10T12:00:00Z","published_at":"2026-09-10T12:30:00Z",
+"assets":[
+{"name":"Editor-2.4.1-portable-x64.zip","size":41000000,"digest":"sha256:1111111111111111111111111111111111111111111111111111111111111111","browser_download_url":"https://github.com/ejemplo/editor/releases/download/v2.4.1/Editor-2.4.1-portable-x64.zip"},
+{"name":"Editor-2.4.1-setup-x64.exe","size":38000000,"digest":"sha256:ABCDEFabcdef0123456789abcdef0123456789ABCDEF0123456789abcdef0123","browser_download_url":"https://github.com/ejemplo/editor/releases/download/v2.4.1/Editor-2.4.1-setup-x64.exe"},
+{"name":"Editor-2.4.1-setup-arm64.exe","size":37000000,"digest":"sha256:2222222222222222222222222222222222222222222222222222222222222222","browser_download_url":"https://github.com/ejemplo/editor/releases/download/v2.4.1/Editor-2.4.1-setup-arm64.exe"},
+{"name":"Editor-2.4.1-x64.msi","size":39000000,"digest":null,"browser_download_url":"https://github.com/ejemplo/editor/releases/download/v2.4.1/Editor-2.4.1-x64.msi"},
+{"name":"Editor-2.4.1-setup-x64.exe.sha256","size":90,"browser_download_url":"https://github.com/ejemplo/editor/releases/download/v2.4.1/Editor-2.4.1-setup-x64.exe.sha256"},
+{"name":"Editor-2.4.1-setup-x64.exe.sig","size":600,"browser_download_url":"https://evil.example/Editor-2.4.1-setup-x64.exe.sig"}
+],"body":"Correcciones."}

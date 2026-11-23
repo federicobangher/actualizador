@@ -1,0 +1,578 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr">
+<head id="DialogHeading"><meta http-equiv="X-UA-Compatible" content="IE=7" /><link rel="stylesheet" href="Style/Catalog.css" type="text/css" /><title>
+	Microsoft Update Catalog
+</title><script type="text/javascript">
+	function supressError(message, url, line)
+	{
+	  var re = /^function\s*([^(]*)\s*\(([^)]*)\)/;
+	  var matches = null;
+	  if (arguments.caller != null) {
+	    matches = re.exec(arguments.caller.callee);
+	  }
+	  var argArray = new Array();
+	  var fName = 'unknown';
+	  if(matches)
+	  {
+	    if(matches[1] && matches[1].toString().length > 0)
+	       fName = matches[1].toString();
+	    if(matches[2] && matches[2].toString().length > 0)
+	    {
+	       var cleanMatches = new String(matches[2]).replace(/\s*/g,'');
+	       argArray = cleanMatches.split(',');
+	    }
+	  }
+	  var args = (argArray.length>0)?'':'none';
+	  for(var i=0; i<argArray.length; i++)
+	  {
+	    args += ((args=='')?'':', ') + argArray[i] + '(' + typeof(arguments.caller[i]) + '):';
+	    args += arguments.caller[i];
+	  }
+	  if(typeof(logger) != typeof(undefined) && logger != null)
+	    logger.log(logger.logLevelFatal, 'JavaScript Error: MESSAGE='+ message + '. URL=' + url + '. LINE='+ line + '. FUNCTION_NAME=' + fName +'. ARGUMENTS=' + args);
+	  var location = window.location.href.toLowerCase();
+	  if(location.indexOf('ErrorInline.aspx'.toLowerCase()) == -1)
+	    window.location.href = 'ErrorInline.aspx'  + '?id=' + Microsoft.UpdateServices.Catalog.Constants.ErrorScriptError;
+	  return true;
+	}
+	window.onerror = supressError;
+</script>
+    <script language="javascript" type="text/javascript">  
+        // Writes the eula and file info arrays
+        var downloadInformation = new Array();
+downloadInformation[0] = new Object();
+downloadInformation[0].updateID ='7f659ce1-a58f-41a8-bcf0-18fe434f0916';
+downloadInformation[0].isHotFix =false;
+downloadInformation[0].enTitle ='Update for Microsoft Office 2013 (KB4461444) 64-Bit Edition';
+downloadInformation[0].sizeLanguage ='';
+downloadInformation[0].files = new Array();
+downloadInformation[0].files[0] = new Object();
+downloadInformation[0].files[0].url = 'http://download.windowsupdate.com/c/msdownload/update/software/crup/2019/01/oart-x-none_e3fa9c9103bc509dcdf7e971ca3cbea0c18a7b0d.cab';
+downloadInformation[0].files[0].digest = '4/qckQO8UJ3N9+lxyjy+oMGKew0=';
+downloadInformation[0].files[0].architectures = '';
+downloadInformation[0].files[0].languages = 'all';
+downloadInformation[0].files[0].longLanguages = 'all';
+downloadInformation[0].files[0].fileName = 'oart-x-none_e3fa9c9103bc509dcdf7e971ca3cbea0c18a7b0d.cab';
+downloadInformation[0].files[0].defaultFileNameLength = 128;
+downloadInformation[0].allFilesExist = false;
+var minFilePathLength =119;
+var eulaInfo =  new Array();
+var eulaInfo = '';
+   
+
+        // Gets the import, sku, ssl, portnumber info from request
+        var contentImport = '';
+        var sku = '';       
+        var serverName = '';
+        var ssl = '';
+        var portNumber = '';
+        var isScopedView =  '';
+        
+        // Get the information from server including stings that need to be passed to js
+        var hotfixUpdatesPresent = 'False'.toLowerCase();
+        var doneStatus = 'Done';
+        var failedStatus = 'Failed';
+        var canceledStatus = 'Canceled';
+        var locationRequiredText ='Please select a download location';
+
+        var internetExplorer = false;
+        var downloadManager;
+
+        /// <summary>
+        ///   Page load
+        /// </summary>
+        function pageLoad() {
+            if (internetExplorer) {
+                // Any IE specific initialization.
+            } else {
+                // Replace the placeholder <div> with a list of updates and their files (as links) for download.
+                var downloadFilesDiv = $get('downloadFiles');
+                if (downloadInformation != null && downloadInformation.length > 0) {
+                    for (var updateIndex = 0; updateIndex < downloadInformation.length; updateIndex++) {
+                        var updateElement = document.createElement("div");
+                        updateElement.innerText = downloadInformation[updateIndex].enTitle;
+                        updateElement.className = "textTopTitlePadding textBold textSubHeadingColor";
+                        downloadFilesDiv.appendChild(updateElement);
+
+                        var files = downloadInformation[0].files;
+                        if (files != null && files.length > 0) {
+                            var hr = document.createElement("hr");
+                            downloadFilesDiv.appendChild(hr);
+
+                            var hasMultipleLanguages = false;
+                            var language = files[0].longLanguages;
+                            for (var fileIndex = 1; fileIndex < files.length; fileIndex++) {
+                                if (language !== files[fileIndex].longLanguages) {
+                                    hasMultipleLanguages = true;
+                                    break;
+                                }
+                            }
+
+                            var lastDisplayedLanguage = "";
+                            for (var fileIndex = 0; fileIndex < files.length; fileIndex++) {
+                                if (hasMultipleLanguages && files[fileIndex].longLanguages !== lastDisplayedLanguage) {
+                                    var languageDiv = document.createElement("div");
+                                    var languageText = document.createTextNode(files[fileIndex].longLanguages);
+                                    languageDiv.appendChild(languageText)
+                                    if (lastDisplayedLanguage !== "") {
+                                        languageDiv.style.marginTop = "10px";
+                                    }
+                                    downloadFilesDiv.appendChild(languageDiv);
+                                    lastDisplayedLanguage = files[fileIndex].longLanguages;
+                                }
+
+                                var fileLinkDiv = document.createElement("div");
+                                var fileLink = document.createElement("a");
+                                var linkText = document.createTextNode(files[fileIndex].fileName);
+                                fileLink.appendChild(linkText);
+                                fileLink.title = files[fileIndex].fileName;
+                                fileLink.href = files[fileIndex].url;
+                                fileLinkDiv.appendChild(fileLink);
+                                downloadFilesDiv.appendChild(fileLinkDiv);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Get the elements for those events need to be attached
+            var closeButton =  $get('downloadSettingsCloseButton');
+            var continueButton =  $get('downloadSettingsContinueButton');
+            var hotfixContinueButton = $get('hotfixContinueButton');
+            var hotfixCheckBox = $get('hotFixCheckBox');
+            var eulaAcceptButton = $get('eulaAcceptButton');
+            var eulaCancelButton = $get('eulaCancelButton'); 
+            var email = $get('email');
+            
+            if (ssl == Microsoft.UpdateServices.Catalog.Constants.EmptyString) {
+                ssl = Microsoft.UpdateServices.Catalog.Constants.ImportUsingSslDefault;
+            }
+                
+            // If port number is empty then port number is 433 if ssl is true otherwise 80
+            if (portNumber == Microsoft.UpdateServices.Catalog.Constants.EmptyString) {
+                if(ssl == "true") {    
+                    portNumber = Microsoft.UpdateServices.Catalog.Constants.PortNumberSsl;
+                } else {
+                    portNumber = Microsoft.UpdateServices.Catalog.Constants.PortNumber;
+                }
+             }
+                                 
+            var progressElements = null;
+            if (internetExplorer) {
+                // Builds the progess elements array which conatins the progress div, cancel image, progress text elements for the all updates that 
+                // are downloading
+                progressElements = new Array();
+                var progressUpdateID;
+                if (typeof (downloadInformation) != typeof (Microsoft.UpdateServices.Catalog.Constants.UndefinedValue) && downloadInformation.length > 0) {
+
+                    for (i = 0; i < downloadInformation.length; i++) {
+                        progressUpdateID = downloadInformation[i].updateID;
+                        progressElements[progressUpdateID] = new Object();
+                        progressElements[progressUpdateID].progressDiv = $get(progressUpdateID);
+                        progressElements[progressUpdateID].progressText = $get(progressUpdateID + "_Text");
+                        progressElements[progressUpdateID].progressImg = $get(progressUpdateID + "_Img");
+                        progressElements[progressUpdateID].progressImgParent = progressElements[progressUpdateID].progressImg.parentElement;
+                    }
+                }
+                downloadManager = new Microsoft.UpdateServices.Catalog.DownloadManager($get('MUCatalogWebControl'), new Sys.UI.Control($get('downloadSettingsFolderSelectionInput')));
+            } else {
+                downloadManager = new Microsoft.UpdateServices.Catalog.DownloadManager(null, null);
+            }
+
+            var browseButton = $get('downloadSettingsFolderSelectionButton');
+            downloadManager.initialize(
+                closeButton //Close button in the progress dialog
+                ,continueButton //continue button in the Download settings dialog
+                ,hotfixContinueButton //continue button in the hotfix dialog
+                ,hotfixCheckBox //Hotfix check box
+                ,eulaAcceptButton //accept button in the Eula dialog
+                ,eulaCancelButton //cancel button in the Eula dialog
+                ,$get("dialogMainBox")//parent div that contains all the dialog divs
+                ,$get('downloadProgress')//the progess dialog top element
+                ,$get('eulaNotice') //Eula dialog top elemnet
+                ,$get("cancelAll")// cancell all element in the progress dialog
+                ,$get('eulaTitles')//Eula titles div in the eula dialog
+                ,$get('eulaExplain')//Eula explanation div, this is the div that is used to insert the eula frame before
+                ,$get("downloadSuccess")//Download success information div in the progress dialog
+                ,$get("downloadFailed")//Download Failed information div in the progress dialog
+                ,$get("downloadSucessHeaderDetailBox")//Download success header div in the progress dialog
+                ,$get("downloadProgressHeader")//Download progress header div in the progress dialog
+                ,$get('downloadSettings')//download settings dialog top element
+                ,$get('hotFixNotice')//hotfix notice top element
+                ,$get('email')//hotfix email element
+                ,$get('hotFixEmailWarning') //hotfix email warning.
+                ,contentImport
+                ,sku       
+                ,serverName
+                ,ssl
+                ,portNumber
+                ,hotfixUpdatesPresent
+                ,doneStatus
+                ,failedStatus
+                ,canceledStatus
+                ,locationRequiredText
+                ,Microsoft.UpdateServices.Catalog.Constants.PageThanks
+                ,Microsoft.UpdateServices.Catalog.Constants.PageDownloadInformation
+                ,Microsoft.UpdateServices.Catalog.Constants.PageDownloadDialog
+                ,Microsoft.UpdateServices.Catalog.Constants.PageErrorInformation
+                ,Microsoft.UpdateServices.Catalog.Constants.DisabledCancelImage
+                ,Microsoft.UpdateServices.Catalog.Constants.DisabledCancellAllImage
+                , "flatGreenButton buttonPadding" //progress class
+                , "flatRedButton buttonPadding" //failed class
+                , "flatGreenButton buttonPadding" // completed class
+                , "flatOrangeButton buttonPadding" //cancled class
+                , "downloadDialogProgressText progressTextCommon"//Progress text class
+                , "flatGrayButton cancelButtonInactive buttonPadding"//hotfix continue button disabled class
+                , "flatBlueButton cancelButton buttonPadding"//hotfix continue button active class
+                , "cancelTDDisabled"//cancel td disabled class
+                , "cancelHeaderDisabled"//cancel all td Disabled Class
+                , "cancelButtonInactive"//Cancel image inactive class
+                , progressElements // Array of progess elemnts which contains progrees div, cancel image, progress text for all the downloading updates (null for non-IE)
+                ,downloadInformation//array of download information
+                ,eulaInfo//array of eula information
+                ,isScopedView //coming from scoped view page or not
+                ,$get('downloadSettingsFileAlert')
+                ,$get('folderLengthAlert')
+                ,minFilePathLength
+                ,'To retry downloading the canceled or failed updates, you can add them back to your basket by clicking OK.' 
+            );
+
+            $addHandler(closeButton, "click", function () { window.close(); });
+
+            if (internetExplorer) {
+                $addHandler(browseButton, "click", function () {
+                    downloadManager.recordDownloadFolder('Select the folder to which updates will be downloaded.');
+                });
+
+                $addHandler(continueButton, "click", function () { downloadManager.continueButtonClick(); });
+                $addHandler(hotfixCheckBox, "click", function () { downloadManager.hotfixCheckBoxClick(); });
+                $addHandler(hotfixContinueButton, "click", function () { downloadManager.hotfixContinueButtonClick(); });
+                $addHandler(eulaAcceptButton, "click", function () { downloadManager.eulaAcceptButtonClick(); });
+                $addHandler(eulaCancelButton, "click", function () { window.close(); });
+                $addHandler(email, "keyup", function (e) { downloadManager.emailInputChanged(e); });
+
+                // Attach onclick events to all the cancel buttons in the data grid.
+                // The event handler for add cancel all is different from the 
+                // remaining buttons.
+                var updateDiv = $get('tableContainer');
+                var imgElments = updateDiv.getElementsByTagName("img");
+
+                for (i = 0; i < imgElments.length; i++) {
+                    if (imgElments[i].id != "cancelAll") {
+                        attachEventToInput(imgElments[i]);
+                    }
+                    else {
+                        attachEventToCancelAll(imgElments[i]);
+                    }
+                }
+
+                $addHandler(window, "beforeunload", function (e) { if (downloadManager.windowOnBeforeUnload()) { return 'Closing this window will cancel any download or imports in progress.'; } });
+                $addHandler(window, "onunload", function (e) { downloadManager.windowUnload(); });
+            }
+
+            if (!internetExplorer) {
+                closeButton.style.display = "inline";
+                continueButton.style.display = "none";
+            }
+
+            window.focus();
+        }
+
+        /// <summary>
+        ///   helper function that is called to attach events to the cancel all image
+        /// </summary> 
+        function attachEventToCancelAll(cancelAllImgElment) {
+            cancelAllImgElment.attachEvent('onclick', cancelAllEventHelper);
+            cancelAllImgElment.attachEvent('onkeydown',
+                function () {
+                    if (event.keyCode == Microsoft.UpdateServices.Catalog.Constants.EnterButtonKeyCode) {
+                        cancelAllImgElment.click();
+                    }
+                }
+            );
+        }
+
+        /// <summary>
+        ///   helper function that is called to attach events to the cancel images
+        /// </summary>
+        function attachEventToInput(imgElments) {
+            imgElments.attachEvent('onclick', cancelEventHelper);
+            imgElments.attachEvent('onkeydown',
+                function () {
+                    if (event.keyCode == Microsoft.UpdateServices.Catalog.Constants.EnterButtonKeyCode) {
+                        imgElments.click();
+                    }
+                }
+            );
+        }  
+
+        /// <summary>
+        ///   helper function for progress check
+        /// </summary>
+        function checkProgressHelper() {
+            downloadManager.checkProgress();
+        }
+
+        /// <summary>
+        ///   helper function for Child updates Import
+        /// </summary>  
+        function importChildUpdatesHelper() {
+            downloadManager.importChildUpdates();
+        }
+
+        /// <summary>
+        ///   helper function for parent updates Import
+        /// </summary>         
+        function importUpdatesHelper() {
+            downloadManager.importUpdates();
+        }
+
+        /// <summary>
+        ///   helper function to cancel the events on the image elemets
+        /// </summary>
+        function cancelEventHelper() {
+            downloadManager.cancelDownload(event.srcElement);
+        }
+
+        /// <summary>
+        ///   helper function for cancell all image element
+        /// </summary>
+        function cancelAllEventHelper() {
+            downloadManager.cancelAll();
+        }
+
+        function goToErrorPage(errCode) {
+            var windowName = errCode.toString().replace(/-/g, Microsoft.UpdateServices.Catalog.Constants.EmptyString);
+            var qs = new Microsoft.UpdateServices.Catalog.QueryString(window.location.search);
+            var errorPage = window.open(Microsoft.UpdateServices.Catalog.Constants.PageErrorInformation + qs.appendErrorsQS("?id=" + errCode),
+                windowName, 'height=480,width=600,status=no,toolbar=no,menubar=no,location=no,scrollbars=yes,resizable=1 ');
+            return false;
+        }
+    </script>
+</head>
+<body class="dialogBody" id="ltr"> 
+    <form id="basketForm" method="post" >
+        <input type="hidden" id="updateIDs" name="updateIDs" />
+        <input type="hidden" id="updateIDsBlockedForImport" name="updateIDsBlockedForImport" />
+        <input type="hidden" id="wsusApiPresent" name="wsusApiPresent" />
+        <input type="hidden" id="contentImport" name="contentImport" />
+        <input type="hidden" id="sku" name="sku" />
+        <input type="hidden" id="serverName" name="serverName" />
+        <input type="hidden" id="ssl" name="ssl" />
+        <input type="hidden" id="portNumber" name="portNumber" />
+        <input type="hidden" id="version" name="version" />
+    </form>
+    <form method="post" action="./DownloadDialog.aspx" id="dialogForm" style="height:100%">
+<div class="aspNetHidden">
+<input type="hidden" name="__EVENTTARGET" id="__EVENTTARGET" value="" />
+<input type="hidden" name="__EVENTARGUMENT" id="__EVENTARGUMENT" value="" />
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="nES45SO0SCvQGWkojhz6bOe6PkNnxuaJUfrvGc0njve6f/Ky3Hf4iJ2q0Dh+zdA10QNtHmIhojX4GGIb0/nHQCbzVn/+2ztTwT/YlGkpVJU8Tyzhfm5icZSmcHprObMHRahpRXqaWL9XgmCxPDVOeOlvWDAcEFoRcRzWTGjvlhcxEiD81GyXQL7gN6b2mt32eh2QdDprAu/nZ9TI4j793jNznBlxvDn6ULOnhY8LMWEjUZqiXsqmMSGIaMBgpskj8TetUXgGHQVR8QgdiMSipSVMfXqQQ2dTWDiajuNavY9tP+46+fY9geOa1ePuzp34KKl/OeAazw/7UnwxL55Tf/vjzBpsf3rZnhc0A2LbkTW7LYx4XgLUbsdS1adTEqDjSBjq3ej3CGoC3VKRDxPeN/MHfOyMtV27Dvlm3KuW3TFZLxJ2HibUaNhDO3MySjLvVqEDxB5Eq5tFOp/Jh4eEpwzGgYSearxTusYV6/NBl05QK/Ud/BLXYFx0AsrEsA6LfXYv2CAGirBtJtbFMK+kqcvEUI+yP5F7sSciOLesclu7t3lT2lHkBnL6VZ4rOprdzMnAvh8RZbTCgN7y4azEVe+dsn2nvBCAt3TWgt1u5ljAQce816L0kRZoMvLnlmKw/cOQRD9otDgOdOVSHQoRkVtdyazJy0K9GdDlXrCumSVg44hWAu8u+iXf6chTNhGq0+xFzONkjXK70dncRNhKrXV22h7z5rY9m50aQhu+XaGGuOJjZYYu9UK8vVBojmQqhMLUkRhxF70kueDTNLYvys578cXDDE8ZEvhXHJaa3SSNd5ofzUj9ZYYTmj9m8KmU/l2TUe2MfP2MMERpaB7nVX9V1Md834GXAcmhinra1bFpXfgusbfY0Z9WkXx448zU4qlnUswRDComfB1yj9CwXileaOJBElSr+JX7T+vahBKYmLKA/11bZTClV19916K6E7IjUDOsOX4hQpPPq83r7t/nPbd7es5FYVBItsgH7hfNkWyALZbDOCFdsVbOeRztAVrlXe8gZ8dbYDH1RkUtsQVVuRiWy/SXoJeWqGjvD3sG+rL9z0KkgBp6Koi6v23s1U4bQDEzSEXNppA6EMFpdOrIKrhuB1+BQ8HNXNZkm7IZrYc/DLwItPaT5zWgu6Mdvjoq4SkynvWUCO354EAoFdKAXrsqkjUFOCVIy7GA8L6gIFp6xcOEl1WQwlWy/78RRnwAF782o8j/Rvq63o1dd0HXVEwimtwLcVaPBvIVeY9IJAdCvUIGZ8XC0Vk/3Zu0EvA14Bx30siYMNlS0kWaEtlevMpKWnVDmLjHgcn5aiEJVWOeT73eiynW+P9F5XzG1f3ar2RJ/cuUT4INV/pgFJ8s30qsSkzYt+geYc+j4Tp7hOgEJxGHQD5LPSLmWQfyJFstx9C770oKtexl+7G2i3jldyzODIsebrAzjHX0iAveHZJkJyixzibxzenGt55cz4f3R3FeQTs9JRbh9/uYgk9oyB/1vE8uV1310RlsPOrEhrLH00ebj9na//CY6r5ocoPz6TZtlnq77akJP5xghOMZHXdl/g9R4T32D/PYaok69ykpKyN4S4Cguam1qVnZ40rzDipyb7PIGw+oKfiBIn2Q2Ecoc91nqXFpmjT7VUo+2VU6cQw20wexZHYO3OS5ouHZdC/FmrwdJ/QDcRt6daG/IfLMvcG76cs7YdduXOudfOzTWC0cD4U/+YO80xNTBOwVYkL14CRhADiZIGEEQwIYey2+04AYczMo0z1f4TUkt0w0HWfkxiyJhfP6qAy9pKQKzX3Tpg+Z4JMhmEUsl+VSfKaJE1wthOSY72jzh6o=" />
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+var theForm = document.forms['dialogForm'];
+if (!theForm) {
+    theForm = document.dialogForm;
+}
+function __doPostBack(eventTarget, eventArgument) {
+    if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
+        theForm.__EVENTTARGET.value = eventTarget;
+        theForm.__EVENTARGUMENT.value = eventArgument;
+        theForm.submit();
+    }
+}
+//]]>
+</script>
+
+
+<script src="/WebResource.axd?d=pynGkmcFUV13He1Qd6_TZHxxdeJUrNoPJt6lxqvRW6Pzs10y1yT0YV6OgZaeZ6xoRcBn9JsAyiMny6iPkJnw0A2&amp;t=636939701749177621" type="text/javascript"></script>
+
+
+<script src="/ScriptResource.axd?d=nnHyWnZ5bTPuYszCeiYmK3gfrjvv_KKsR3wlPXRXmLFOE36yh4_b39LDL7RmuQ4MADV8Wv7vDPBzobz-eSPAQXqqlG4wvyPO-Z2_rCrsau5dOFMBJc5LanKGr3Ku5sYBriHSA_Dg2nW3vappjaEQ_YD7W0WbwEvlg7N8cWmterU1&amp;t=ffffffffa580202a" type="text/javascript"></script>
+<script type="text/javascript">
+//<![CDATA[
+if (typeof(Sys) === 'undefined') throw new Error('ASP.NET Ajax client-side framework failed to load.');
+//]]>
+</script>
+
+<script src="/ScriptResource.axd?d=geiJw278ELCE4oVrRV2zH-k32B7rKsx1y0wEHuFtKdbvYsv1jM4LrzM-l7jVcSI6uqGue9JqmQhCxtbxe_mUC3s0qWlxaygtGqyOfpESApacvDpFy6GGDvRg4QmTnINy8gRmHjVrykNQcy-1kI-xE3gN-Q_zGkRIyvum8g69FXlicPvvslhUy1waiowNLqKC0&amp;t=ffffffffa580202a" type="text/javascript"></script>
+<script src="SiteConstants.aspx?6" type="text/javascript"></script>
+<script src="Script/CommonTypes.js?6" type="text/javascript"></script>
+<script src="Script/Reporting.js?6" type="text/javascript"></script>
+<script src="Script/DownloadBasket.js?6" type="text/javascript"></script>
+<script src="Script/MasterComponents.js?6" type="text/javascript"></script>
+<script src="Script/DownloadDialog.js?6" type="text/javascript"></script>
+<script src="ReportingWSProxy.asmx/jsdebug" type="text/javascript"></script>
+<div class="aspNetHidden">
+
+	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="F6F0C0DF" />
+</div>
+    <script type="text/javascript">
+//<![CDATA[
+Sys.WebForms.PageRequestManager._initialize('scriptManager', 'dialogForm', [], [], [], 90, '');
+//]]>
+</script>
+    
+        <div id="dialogMainBox"  style="display:none;">
+            <table id="layoutTable" cellpadding="0" cellspacing="0" border="0" style="height:100%">
+                <tr style="height:90%" valign="top">
+                    <td >
+                        <div id="innerDialogBox">
+                            <div id="downloadSettings">
+                                <div id="downloadSettingsHeaderTitleBox" class="dialogHeader">Download</div>
+                                <div id="downloadSettingsHeaderDetailBox" class="dialogDetail">Download Updates</div>
+                                
+                                
+                                    <div id="downloadFiles"></div>
+                                
+
+                                <div id="downloadSettingsFileAlert" class="downloadSettingsWarningPositioning noDisplay">
+                                    <img id="warningImage1" src="Images/decor_Warning.gif" alt="Warning" />
+                                    <span id="downloadSettingsFileAlertResource">One or more updates have already been downloaded to the location that you selected. To download these updates again, you need to select another location on the computer.</span>
+                                </div>
+                                <div id="folderLengthAlert" class="downloadSettingsWarningPositioning noDisplay">
+                                    <img id="warningImage2" src="Images/decor_Warning.gif" alt="Warning" />
+                                    <span id="folderLengthAlertResource">The updates in your basket cannot be downloaded to the path you specified, because the path name is longer than allowed by Windows.  Please select a new download path containing fewer characters.</span>
+                                </div>
+                            </div>
+                            <div id="hotFixNotice" style="display: none;">
+                                <div id="hotFixNoticeHeaderTitleBox" class="dialogHeader">
+                                    <span id="hotFixNoticeHeaderTitleResource">Hotfix Download Notice</span>
+                                </div>
+                                <div id="hotFixUpdates" class="dialogDetail">
+                                    <div id="hotFixupdatesName" class="hotfixTitles" TABINDEX="1">
+                                        
+                                    </div>
+                                </div>
+                                <div id="hotFixPolicy" class="dialogSubHeader">
+                                    <span id="hotFixPolicyResource">Hotfix Download Policy</span>
+                                </div>
+                                <div id="hotFixNoticeHeaderDetailBox" class="dialogDetail hotfixNotice" TABINDEX="1"></div>                                
+                                <div id="hotFixCheck" class="dialogDetail hotfixCheckBox">
+                                    <input type="checkbox" id="hotFixCheckBox" tabindex = "1" /><label for="hotFixCheckBox"><span id="hotFixCheckResource">I have read and understood the policy.</span>
+                                    </label>
+                                </div>
+                                <div id="hotFixEmail" class="dialogDetail hotfixEmail"></div>
+                                <span id="emailResource">Email address (required):</span>&nbsp;
+                                <table>
+                                    <tr>
+                                        <td>
+                                            <input type="text" maxlength="200" id="email" class="hotfixEmailInputBox middleAlign" />
+                                        </td>
+                                        <td>
+                                            <div id="hotFixEmailWarning" style="display: none; padding-top:0.5em">
+                                                <img title='Please enter a valid email address (e.g. user@microsoft.com)' id="emailWarningIcon" src="Images/decor_Warning.gif" />
+                                                Please enter a valid email address (e.g. user@microsoft.com)                                                
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div id="eulaNotice" style="display: none;">
+                                <div id="eulaNoticeHeaderTitleBox" class="dialogHeader">
+                                    <span id="eulaNoticeHeaderTitlResource">Microsoft Software License Terms</span>
+                                </div>
+                                <div id="eulaTitles" class="dialogDetail" TABINDEX="1">
+                                </div>
+                                <div id="eulaInfo" class="dialogDetail">
+                                      <span id="eulaNoticeIntro">Please read the following license agreement.</span>
+                                </div>
+                                <div id="eulaExplain" class="dialogDetail">
+                                    <span id="eulaExplainResource">If you choose not to accept the terms, the updates you are preparing to download will be canceled.</span>
+                                </div>
+                            </div>
+                            <div id="downloadProgress" style="display: none;">
+                                <span id="downloadProgressHeader">
+                                    <div id="downloadProgressHeaderTitleBox" class="dialogHeader">Download Progress</div>
+                                    <div id="downloadProgressHeaderDetailBox" class="dialogDetail">Your updates are downloading.</div>
+                                </span>
+                                <span id="downloadSuccess" style="display: none">
+                                    <div id="downloadSucessHeaderTitleBox" class="dialogHeader">Download Completed</div>
+                                     <table border="0" padding="0" margin="0">
+                                        <tr>
+                                            <td valign = "top"><img src="Images/decor_Success.gif" /></td>
+                                            <td valign="middle">
+                                                <span id="downloadSucessHeaderDetailBox" class="dialogDetail">Your updates have been successfully downloaded to: </span>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </span>
+                                <span id="downloadFailed" style="display: none">
+                                    <div id="downloadFailedHeaderTitleBox" class="dialogHeader">Download Results</div>
+                                     <table border="0" padding="0" margin="0">
+                                        <tr>
+                                            <td valign = "top"><img src="Images/decor_Error.gif"/></td>
+                                            <td valign="middle">
+                                                <span id="downloadFailedHeaderDetailBox" class="dialogDetail">Some updates could not be downloaded. If you canceled the process, try again to download the updates. If an error occurred, click <span class="contentTextInline">Failed</span> in the progress column next to each update to see how to solve the problem.</span>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </span>
+                                <div id="tableContainer" class="dialogTableContainer resultsBackGround">
+                                    <table class="resultsBorder resultsBackGround" cellspacing="0" cellpadding="0" rules="all" id="basketContents" style="border-width:0px;width:100%;border-collapse:collapse;">
+	<tr class="dataGridFixedHeader1" id="headerRow">
+		<td class="headerText ResultsHeaderTD" id="header_C0">
+                                                    &nbsp;
+                                                </td><td class="headerText resultsHeaderpadding ResultsHeaderTD resultsBorderRight" id="header_C1">
+                                                    <span id="basketContents_ctl01_labelTitle">Title</span>
+                                                    <img id="basketContents_ctl01_TitleSortArrow" class="hideSortArrow sortImagePadding" src="Images/button_SortAscendingArrow.gif" align="right" />
+                                                </td><td class="headerText resultsHeaderpadding ResultsHeaderTD resultsBorderRight" id="header_C2">
+                                                    <span id="basketContents_ctl01_labelProducts">Products</span>
+                                                    <img id="basketContents_ctl01_ProductsSortArrow" class="hideSortArrow sortImagePadding" src="Images/button_SortAscendingArrow.gif" align="right" />
+                                                </td><td class="headerText resultsHeaderpadding ResultsHeaderTD resultsBorderRight" id="header_C3">
+                                                    <span id="basketContents_ctl01_labelProgress">Progress</span>
+                                                </td><td class="headerText cancelHeaderTD resultspadding" id="header_C4">
+                                                    <img src="Images/button_Cancel_hover.gif" id="cancelAll" class="cancelButton buttonPadding" tabindex = '0'/>
+                                                </td>
+	</tr><tr id="7f659ce1-a58f-41a8-bcf0-18fe434f0916_R0">
+		<td class="resultsbottomBorder resultspadding resultsIconWidth " id="7f659ce1-a58f-41a8-bcf0-18fe434f0916_C0_R0">
+                                                </td><td class="resultsbottomBorder resultspadding" id="7f659ce1-a58f-41a8-bcf0-18fe434f0916_C1_R0">
+                                                    Update for Microsoft Office 2013 (KB4461444) 64-Bit Edition
+                                                </td><td class="resultsbottomBorder resultspadding" id="7f659ce1-a58f-41a8-bcf0-18fe434f0916_C2_R0">
+                                                    Office 2013
+                                                </td><td class="resultsbottomBorder centerAlign progressTD" id="7f659ce1-a58f-41a8-bcf0-18fe434f0916_C3_R0">
+                                                    <div class="progressOuterBox textAlignLeft">
+                                                        <div id="7f659ce1-a58f-41a8-bcf0-18fe434f0916" class="flatGreenButton"
+                                                            style="visibility: hidden; padding-top: 3px; padding-bottom: 3px;">
+                                                        </div>
+                                                    </div>
+                                                    <span class="progressTextCommon" id="7f659ce1-a58f-41a8-bcf0-18fe434f0916_Text">
+                                                        Waiting</span>
+                                                </td><td class="resultsbottomBorder resultspadding cancelTD" id="7f659ce1-a58f-41a8-bcf0-18fe434f0916_C4_R0">
+                                                    <img id="7f659ce1-a58f-41a8-bcf0-18fe434f0916_Img" src="Images/button_Cancel.GIF" class="cancelButton" tabindex = '0'/>
+                                                </td>
+	</tr>
+</table>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr >
+                    <td id="minWidthCell">
+                        <img src="Images/spacer.gif" alt="" class="dialogWidthSpacer" />
+                    </td>
+                </tr>
+                <tr>
+                <td>
+                    <div id="downloadDialogButtonsBox"  class="textAlignRight" >
+                        <div id="innerDownloadDialogButtonsBox">
+                            <input type="button" style="display: none" class="flatBlueButton cancelButton buttonPadding" id="downloadSettingsBackButton" value='Back' />
+                            <input type="button" style="cursor:auto;" class="flatGrayButton cancelButtonInactive buttonPadding" disabled id="downloadSettingsContinueButton" value='Continue' />
+                            <input type="button" style="display: none" class="flatGrayButton cancelButtonInactive buttonPadding" id="hotfixContinueButton" value='Continue' disabled />
+                            <input type="button" style="display: none" class="flatBlueButton cancelButton buttonPadding" id="eulaAcceptButton" value='I Accept' />
+                            <input type="button" style="display: none" class="flatBlueButton cancelButton buttonPadding" id="eulaCancelButton" value='Cancel' />
+                            <input type="button" style="display: none" class="flatBlueButton cancelButton buttonPadding" id="downloadSettingsCloseButton" value='Close' />
+                        </div>
+                     </div>
+                </td>
+                </tr>
+            </table>
+        </div>
+        </form>
+</body>
+</html>
+

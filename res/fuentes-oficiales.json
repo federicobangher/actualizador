@@ -1,0 +1,26 @@
+{
+  "_leeme": [
+    "Catálogo de fuentes oficiales de Actualizador (1.7.5).",
+    "Sirve para los programas que winget no conoce: de qué página oficial sale su última versión y de dónde se baja su instalador.",
+    "Copiá este archivo a %LOCALAPPDATA%\\Actualizador\\fuentes-oficiales.json y agregá entradas en «programas»,",
+    "o subilo a tu GitHub y poné su dirección «raw» (https://raw.githubusercontent.com/…) en Opciones › Actualizaciones › Catálogo de fuentes oficiales.",
+    "Campos: id (minúsculas), producto, nombre (expresión regular sobre el nombre en Aplicaciones instaladas), pagina (HTTPS),",
+    "version (expresión con el grupo (?<v>…) y, si querés, (?<url>…) con el enlace al instalador), instalador (dirección fija opcional),",
+    "dominios (otros dominios permitidos para la descarga), silencioso (interruptores del instalador), procesos (para cerrar antes), nota.",
+    "Seguridad: un instalador sólo se ejecuta si está firmado por el mismo fabricante que el programa instalado y se baja por HTTPS",
+    "desde el dominio de la página o de «dominios». Sin «instalador» ni grupo «url», sólo se compara la versión y se abre la página."
+  ],
+  "_ejemplo": {
+    "id": "mi-programa",
+    "producto": "Mi Programa",
+    "nombre": "^Mi Programa( \\d|$)",
+    "pagina": "https://www.ejemplo.com/descargas",
+    "version": "Mi Programa (?:versi[oó]n )?(?<v>\\d+\\.\\d+(?:\\.\\d+)*)",
+    "instalador": "https://www.ejemplo.com/descargas/miprograma-setup.exe",
+    "dominios": ["descargas.ejemplo.com"],
+    "silencioso": "/S",
+    "procesos": ["MiPrograma"],
+    "nota": "Copiá este bloque dentro de «programas» y cambiá los datos."
+  },
+  "programas": []
+}

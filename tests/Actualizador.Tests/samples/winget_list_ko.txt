@@ -1,0 +1,5 @@
+이름                  장치 ID                 버전           사용 가능   원본
+-------------------------------------------------------------------------------
+Google Chrome         Google.Chrome           130.0.6723.70  131.0       winget
+Git                   Git.Git                 2.47.1                     winget
+Microsoft Edge        Microsoft.Edge          131.0.2903.70              winget

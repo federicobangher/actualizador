@@ -1,0 +1,338 @@
+[
+ {
+  "url": "https://api.github.com/repos/Ultimaker/Cura/releases/1",
+  "html_url": "https://github.com/Ultimaker/Cura/releases/tag/5.14.0-beta.2-RC1",
+  "id": 1,
+  "author": {
+   "login": "github-actions[bot]",
+   "id": 41898282
+  },
+  "node_id": "RE_x",
+  "tag_name": "5.14.0-beta.2-RC1",
+  "target_commitish": "main",
+  "name": "UltiMaker Cura 5.14.0-beta.2-RC1",
+  "draft": false,
+  "immutable": false,
+  "prerelease": true,
+  "created_at": "2026-10-28T10:00:00Z",
+  "published_at": "2026-10-28T10:00:00Z",
+  "assets": [
+   {
+    "url": "https://api.github.com/repos/Ultimaker/Cura/releases/assets/1",
+    "id": 1,
+    "name": "UltiMaker-Cura-5.14.0-beta.2-win64-X64.exe",
+    "label": "",
+    "content_type": "application/octet-stream",
+    "state": "uploaded",
+    "size": 312000000,
+    "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "download_count": 1000,
+    "browser_download_url": "https://github.com/Ultimaker/Cura/releases/download/5.14.0-beta.2/UltiMaker-Cura-5.14.0-beta.2-win64-X64.exe"
+   },
+   {
+    "url": "https://api.github.com/repos/Ultimaker/Cura/releases/assets/1",
+    "id": 1,
+    "name": "UltiMaker-Cura-5.14.0-beta.2-win64-X64.msi",
+    "label": "",
+    "content_type": "application/octet-stream",
+    "state": "uploaded",
+    "size": 312000000,
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "download_count": 1000,
+    "browser_download_url": "https://github.com/Ultimaker/Cura/releases/download/5.14.0-beta.2/UltiMaker-Cura-5.14.0-beta.2-win64-X64.msi"
+   },
+   {
+    "url": "https://api.github.com/repos/Ultimaker/Cura/releases/assets/1",
+    "id": 1,
+    "name": "UltiMaker-Cura-5.14.0-beta.2-linux-X64.AppImage",
+    "label": "",
+    "content_type": "application/octet-stream",
+    "state": "uploaded",
+    "size": 312000000,
+    "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "download_count": 1000,
+    "browser_download_url": "https://github.com/Ultimaker/Cura/releases/download/5.14.0-beta.2/UltiMaker-Cura-5.14.0-beta.2-linux-X64.AppImage"
+   },
+   {
+    "url": "https://api.github.com/repos/Ultimaker/Cura/releases/assets/1",
+    "id": 1,
+    "name": "UltiMaker-Cura-5.14.0-beta.2-macos-ARM64.dmg",
+    "label": "",
+    "content_type": "application/octet-stream",
+    "state": "uploaded",
+    "size": 312000000,
+    "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "download_count": 1000,
+    "browser_download_url": "https://github.com/Ultimaker/Cura/releases/download/5.14.0-beta.2/UltiMaker-Cura-5.14.0-beta.2-macos-ARM64.dmg"
+   }
+  ],
+  "body": "..."
+ },
+ {
+  "url": "https://api.github.com/repos/Ultimaker/Cura/releases/1",
+  "html_url": "https://github.com/Ultimaker/Cura/releases/tag/5.14.0-beta.1",
+  "id": 1,
+  "author": {
+   "login": "github-actions[bot]",
+   "id": 41898282
+  },
+  "node_id": "RE_x",
+  "tag_name": "5.14.0-beta.1",
+  "target_commitish": "main",
+  "name": "UltiMaker Cura 5.14.0-beta.1",
+  "draft": false,
+  "immutable": false,
+  "prerelease": true,
+  "created_at": "2026-10-15T10:00:00Z",
+  "published_at": "2026-10-15T10:00:00Z",
+  "assets": [
+   {
+    "url": "https://api.github.com/repos/Ultimaker/Cura/releases/assets/1",
+    "id": 1,
+    "name": "UltiMaker-Cura-5.14.0-beta.1-win64-X64.exe",
+    "label": "",
+    "content_type": "application/octet-stream",
+    "state": "uploaded",
+    "size": 312000000,
+    "digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "download_count": 1000,
+    "browser_download_url": "https://github.com/Ultimaker/Cura/releases/download/5.14.0-beta.1/UltiMaker-Cura-5.14.0-beta.1-win64-X64.exe"
+   },
+   {
+    "url": "https://api.github.com/repos/Ultimaker/Cura/releases/assets/1",
+    "id": 1,
+    "name": "UltiMaker-Cura-5.14.0-beta.1-win64-X64.msi",
+    "label": "",
+    "content_type": "application/octet-stream",
+    "state": "uploaded",
+    "size": 312000000,
+    "digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "download_count": 1000,
+    "browser_download_url": "https://github.com/Ultimaker/Cura/releases/download/5.14.0-beta.1/UltiMaker-Cura-5.14.0-beta.1-win64-X64.msi"
+   },
+   {
+    "url": "https://api.github.com/repos/Ultimaker/Cura/releases/assets/1",
+    "id": 1,
+    "name": "UltiMaker-Cura-5.14.0-beta.1-linux-X64.AppImage",
+    "label": "",
+    "content_type": "application/octet-stream",
+    "state": "uploaded",
+    "size": 312000000,
+    "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "download_count": 1000,
+    "browser_download_url": "https://github.com/Ultimaker/Cura/releases/download/5.14.0-beta.1/UltiMaker-Cura-5.14.0-beta.1-linux-X64.AppImage"
+   },
+   {
+    "url": "https://api.github.com/repos/Ultimaker/Cura/releases/assets/1",
+    "id": 1,
+    "name": "UltiMaker-Cura-5.14.0-beta.1-macos-ARM64.dmg",
+    "label": "",
+    "content_type": "application/octet-stream",
+    "state": "uploaded",
+    "size": 312000000,
+    "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "download_count": 1000,
+    "browser_download_url": "https://github.com/Ultimaker/Cura/releases/download/5.14.0-beta.1/UltiMaker-Cura-5.14.0-beta.1-macos-ARM64.dmg"
+   }
+  ],
+  "body": "..."
+ },
+ {
+  "url": "https://api.github.com/repos/Ultimaker/Cura/releases/1",
+  "html_url": "https://github.com/Ultimaker/Cura/releases/tag/5.14.0-alpha.0",
+  "id": 1,
+  "author": {
+   "login": "github-actions[bot]",
+   "id": 41898282
+  },
+  "node_id": "RE_x",
+  "tag_name": "5.14.0-alpha.0",
+  "target_commitish": "main",
+  "name": "UltiMaker Cura 5.14.0-alpha.0",
+  "draft": false,
+  "immutable": false,
+  "prerelease": true,
+  "created_at": "2026-06-25T10:00:00Z",
+  "published_at": "2026-06-25T10:00:00Z",
+  "assets": [],
+  "body": "..."
+ },
+ {
+  "url": "https://api.github.com/repos/Ultimaker/Cura/releases/1",
+  "html_url": "https://github.com/Ultimaker/Cura/releases/tag/5.13.0",
+  "id": 1,
+  "author": {
+   "login": "github-actions[bot]",
+   "id": 41898282
+  },
+  "node_id": "RE_x",
+  "tag_name": "5.13.0",
+  "target_commitish": "main",
+  "name": "UltiMaker Cura 5.13.0",
+  "draft": false,
+  "immutable": false,
+  "prerelease": false,
+  "created_at": "2026-05-28T10:00:00Z",
+  "published_at": "2026-05-28T10:00:00Z",
+  "assets": [
+   {
+    "url": "https://api.github.com/repos/Ultimaker/Cura/releases/assets/1",
+    "id": 1,
+    "name": "UltiMaker-Cura-5.13.0-win64-X64.exe",
+    "label": "",
+    "content_type": "application/octet-stream",
+    "state": "uploaded",
+    "size": 312000000,
+    "digest": "sha256:6edb3c4394e6e4ecb6b00f3e96d70e1ea53652c57a9626b58f8fda56e291aa6d",
+    "download_count": 1000,
+    "browser_download_url": "https://github.com/Ultimaker/Cura/releases/download/5.13.0/UltiMaker-Cura-5.13.0-win64-X64.exe"
+   },
+   {
+    "url": "https://api.github.com/repos/Ultimaker/Cura/releases/assets/1",
+    "id": 1,
+    "name": "UltiMaker-Cura-5.13.0-win64-X64.msi",
+    "label": "",
+    "content_type": "application/octet-stream",
+    "state": "uploaded",
+    "size": 312000000,
+    "digest": "sha256:d049b1e9bd80adb2defbb76fcd8e5bfc395e297bd0141b4f2894e37d09d1c33c",
+    "download_count": 1000,
+    "browser_download_url": "https://github.com/Ultimaker/Cura/releases/download/5.13.0/UltiMaker-Cura-5.13.0-win64-X64.msi"
+   },
+   {
+    "url": "https://api.github.com/repos/Ultimaker/Cura/releases/assets/1",
+    "id": 1,
+    "name": "UltiMaker-Cura-5.13.0-linux-X64.AppImage",
+    "label": "",
+    "content_type": "application/octet-stream",
+    "state": "uploaded",
+    "size": 312000000,
+    "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "download_count": 1000,
+    "browser_download_url": "https://github.com/Ultimaker/Cura/releases/download/5.13.0/UltiMaker-Cura-5.13.0-linux-X64.AppImage"
+   },
+   {
+    "url": "https://api.github.com/repos/Ultimaker/Cura/releases/assets/1",
+    "id": 1,
+    "name": "UltiMaker-Cura-5.13.0-macos-ARM64.dmg",
+    "label": "",
+    "content_type": "application/octet-stream",
+    "state": "uploaded",
+    "size": 312000000,
+    "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "download_count": 1000,
+    "browser_download_url": "https://github.com/Ultimaker/Cura/releases/download/5.13.0/UltiMaker-Cura-5.13.0-macos-ARM64.dmg"
+   }
+  ],
+  "body": "..."
+ },
+ {
+  "url": "https://api.github.com/repos/Ultimaker/Cura/releases/1",
+  "html_url": "https://github.com/Ultimaker/Cura/releases/tag/5.13.0-RC6",
+  "id": 1,
+  "author": {
+   "login": "github-actions[bot]",
+   "id": 41898282
+  },
+  "node_id": "RE_x",
+  "tag_name": "5.13.0-RC6",
+  "target_commitish": "main",
+  "name": "UltiMaker Cura 5.13.0-RC6",
+  "draft": false,
+  "immutable": false,
+  "prerelease": true,
+  "created_at": "2026-05-28T09:00:00Z",
+  "published_at": "2026-05-28T09:00:00Z",
+  "assets": [],
+  "body": "..."
+ },
+ {
+  "url": "https://api.github.com/repos/Ultimaker/Cura/releases/1",
+  "html_url": "https://github.com/Ultimaker/Cura/releases/tag/5.12.1",
+  "id": 1,
+  "author": {
+   "login": "github-actions[bot]",
+   "id": 41898282
+  },
+  "node_id": "RE_x",
+  "tag_name": "5.12.1",
+  "target_commitish": "main",
+  "name": "UltiMaker Cura 5.12.1",
+  "draft": false,
+  "immutable": false,
+  "prerelease": false,
+  "created_at": "2026-04-09T10:00:00Z",
+  "published_at": "2026-04-09T10:00:00Z",
+  "assets": [
+   {
+    "url": "https://api.github.com/repos/Ultimaker/Cura/releases/assets/1",
+    "id": 1,
+    "name": "UltiMaker-Cura-5.12.1-win64-X64.exe",
+    "label": "",
+    "content_type": "application/octet-stream",
+    "state": "uploaded",
+    "size": 312000000,
+    "digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "download_count": 1000,
+    "browser_download_url": "https://github.com/Ultimaker/Cura/releases/download/5.12.1/UltiMaker-Cura-5.12.1-win64-X64.exe"
+   },
+   {
+    "url": "https://api.github.com/repos/Ultimaker/Cura/releases/assets/1",
+    "id": 1,
+    "name": "UltiMaker-Cura-5.12.1-win64-X64.msi",
+    "label": "",
+    "content_type": "application/octet-stream",
+    "state": "uploaded",
+    "size": 312000000,
+    "digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "download_count": 1000,
+    "browser_download_url": "https://github.com/Ultimaker/Cura/releases/download/5.12.1/UltiMaker-Cura-5.12.1-win64-X64.msi"
+   },
+   {
+    "url": "https://api.github.com/repos/Ultimaker/Cura/releases/assets/1",
+    "id": 1,
+    "name": "UltiMaker-Cura-5.12.1-linux-X64.AppImage",
+    "label": "",
+    "content_type": "application/octet-stream",
+    "state": "uploaded",
+    "size": 312000000,
+    "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "download_count": 1000,
+    "browser_download_url": "https://github.com/Ultimaker/Cura/releases/download/5.12.1/UltiMaker-Cura-5.12.1-linux-X64.AppImage"
+   },
+   {
+    "url": "https://api.github.com/repos/Ultimaker/Cura/releases/assets/1",
+    "id": 1,
+    "name": "UltiMaker-Cura-5.12.1-macos-ARM64.dmg",
+    "label": "",
+    "content_type": "application/octet-stream",
+    "state": "uploaded",
+    "size": 312000000,
+    "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "download_count": 1000,
+    "browser_download_url": "https://github.com/Ultimaker/Cura/releases/download/5.12.1/UltiMaker-Cura-5.12.1-macos-ARM64.dmg"
+   }
+  ],
+  "body": "..."
+ },
+ {
+  "url": "https://api.github.com/repos/Ultimaker/Cura/releases/1",
+  "html_url": "https://github.com/Ultimaker/Cura/releases/tag/5.12.0",
+  "id": 1,
+  "author": {
+   "login": "github-actions[bot]",
+   "id": 41898282
+  },
+  "node_id": "RE_x",
+  "tag_name": "5.12.0",
+  "target_commitish": "main",
+  "name": "UltiMaker Cura 5.12.0",
+  "draft": false,
+  "immutable": false,
+  "prerelease": false,
+  "created_at": "2026-03-05T10:00:00Z",
+  "published_at": "2026-03-05T10:00:00Z",
+  "assets": [],
+  "body": "..."
+ }
+]

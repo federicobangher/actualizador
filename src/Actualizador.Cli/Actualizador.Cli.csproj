@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Actualizador.Cli.exe: el actualizador desde la consola (scripts, RMM, despliegues). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0-windows</TargetFrameworks>
+    <AssemblyName>Actualizador.Cli</AssemblyName>
+    <RootNamespace>Actualizador.Cli</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\Actualizador.App\app.ico</ApplicationIcon>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(SpVerify)' == 'true'">
+    <TargetFrameworks>net8.0</TargetFrameworks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Actualizador.Core\Actualizador.Core.csproj" />
+    <ProjectReference Include="..\Actualizador.Engine\Actualizador.Engine.csproj" />
+    <!-- ExcludeFromSingleFile: en la portable (un solo .exe) queda al lado, editable, como en la instalada. -->
+    <None Include="..\..\res\fuentes-oficiales.json" Link="fuentes-oficiales.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+</Project>

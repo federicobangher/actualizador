@@ -1,0 +1,12 @@
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+<channel>
+<item>
+<sparkle:releaseNotesLink>https://update.vivaldi.com/update/1.0/relnotes/3.6.2165.34.html</sparkle:releaseNotesLink>
+<sparkle:deltas>
+<enclosure url="https://downloads.vivaldi.com/stable-auto/Vivaldi.3.5.2115.87-3.6.2165.34.x64.delta.7z.cab" sparkle:deltaFrom="3.5.2115.87" sparkle:version="3.6.2165.34"/>
+</sparkle:deltas>
+<enclosure url="https://downloads.vivaldi.com/stable-auto/Vivaldi.3.6.2165.34.x64.exe" sparkle:version="3.6.2165.34"/>
+<sparkle:minimumSystemVersion>6.0.9999</sparkle:minimumSystemVersion>
+</item>
+</channel>
+</rss>

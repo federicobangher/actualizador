@@ -1,0 +1,45 @@
+# 2.0.36 (pedido del usuario, 23/11/2026: «que no tenga que descargar nada, como Virtual Pet»).
+# Al subir una etiqueta v<versión> (por ejemplo v2.0.36), GitHub arma Actualizador en Windows, corre las pruebas y publica la
+# versión con build\Publicar.ps1: la misma entrega que arma Publicar.cmd en una PC. Los equipos la instalan solos al abrir.
+name: Publicar
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publicar-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: La etiqueta coincide con la versión
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: powershell
+        run: |
+          [xml]$p = Get-Content -LiteralPath Directory.Build.props -Raw -Encoding UTF8
+          $v = $p.Project.PropertyGroup | ForEach-Object { $_.Version } | Where-Object { $_ } | Select-Object -First 1
+          if ("v$v" -ne $env:GITHUB_REF_NAME) { throw "La etiqueta $env:GITHUB_REF_NAME no coincide con la versión $v (Directory.Build.props)." }
+
+      - name: Compilar, probar y publicar
+        shell: powershell
+        run: |
+          & .\build\Publicar.ps1 -Repo $env:GITHUB_REPOSITORY -ConPruebas
+          if (-not $?) { exit 1 }

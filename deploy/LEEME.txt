@@ -1,0 +1,50 @@
+﻿Actualizador 2.0 — programas, controladores y Windows
+=====================================================
+
+Actualiza desde un solo lugar los programas (winget y páginas oficiales de cada fabricante), los
+controladores, Windows (Windows Update) y las apps de Microsoft Store.
+
+INSTALAR
+  Doble clic en Instalar.cmd (pide permiso de administrador).
+  Queda en C:\Program Files\Actualizador, en el menú Inicio y en el escritorio.
+
+  Desatendido (Intune, SCCM, GPO de inicio, RMM), como administrador o SYSTEM:
+    Instalar.cmd -Silencioso
+    Instalar.cmd -Silencioso -Politica \\servidor\ti\politica.json -ExigirFirma
+
+  Siempre instala desde cero: quita la versión anterior entera (también las 1.x), comprueba que el
+  programa nuevo abra y, si Windows lo bloquea, deja todo como estaba. Con -Limpio borra además el
+  historial, los ignorados y las opciones de todos los usuarios.
+  Antes de copiar se verifica el SHA-256 de cada archivo (Actualizador\SHA256SUMS.txt).
+  Si Smart App Control (Seguridad de Windows) está activado, Actualizador sin firma no puede abrir:
+  el instalador lo avisa al principio, sin tocar nada.
+  Todo queda anotado en C:\ProgramData\Actualizador\instalacion.log.
+
+DESINSTALAR
+  Configuración › Aplicaciones › Aplicaciones instaladas › Actualizador › Desinstalar,
+  en Actualizador: Más › Desinstalar Actualizador…, o
+    Instalar.cmd /quitar
+  Pide el permiso de administrador si hace falta, muestra lo que va quitando y espera Enter al final.
+  Si algún archivo sigue en uso, se termina de borrar al reiniciar Windows.
+  La política y el registro de cambios se conservan (son registros de la empresa).
+  Todo queda anotado en C:\ProgramData\Actualizador\desinstalacion.log.
+
+USAR
+  Actualizador.exe        la ventana (siempre como administrador): «Buscar actualizaciones»,
+                          marcar lo que quieras («Marcar todo») y «Actualizar».
+  Actualizador.Cli.exe    la consola, para scripts y RMM:
+      Actualizador.Cli buscar --json C:\Inventario\
+      Actualizador.Cli actualizar --tipos programas,controladores --cerrar-programas
+      Actualizador.Cli ayuda
+    Códigos de salida: 0 al día, 10 hay pendientes, 3 alguna falló, 5 bloqueado por la política.
+
+EMPRESA
+  Política (qué fuentes se usan, qué no se instala, editores aprobados, punto de restauración
+  obligatorio…): politica.ejemplo.json y la directiva de grupo HKLM\SOFTWARE\Policies\Actualizador.
+  Cada búsqueda e instalación queda en el Visor de eventos (Aplicación, origen «Actualizador») y en
+  un registro de cambios firmado (HMAC encadenado) en C:\ProgramData\Actualizador\auditoria:
+      Actualizador.Cli verificar-registro
+
+REQUISITOS
+  Windows 10 (1809 o posterior), Windows 11 y Windows Server 2016 o posterior, de 64 bits.
+  La entrega «autónoma» trae .NET 8 adentro: no hace falta instalar nada más.

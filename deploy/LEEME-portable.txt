@@ -1,0 +1,64 @@
+﻿Actualizador 2.0 — programas, controladores y Windows · versión PORTABLE
+========================================================================
+
+Lo mismo que la versión instalada (programas, controladores, Windows Update y apps de Microsoft
+Store), pero sin instalar nada: se usa desde esta carpeta, por ejemplo en un pendrive, equipo
+por equipo.
+
+USAR
+  Actualizador.exe        la ventana. Pide permiso de administrador (UAC) cada vez que se abre.
+                          «Buscar actualizaciones», marcar lo que quieras («Marcar todo») y
+                          «Actualizar».
+  Actualizador.Cli.exe    la consola, para scripts:
+      Actualizador.Cli buscar
+      Actualizador.Cli actualizar --tipos programas,controladores --cerrar-programas
+      Actualizador.Cli ayuda
+
+  Cada .exe trae .NET 8 adentro: el equipo no necesita nada instalado. Dejá juntos todos los
+  archivos de esta carpeta (Actualizador.portable es el que la hace portable).
+
+DÓNDE GUARDA LAS COSAS
+  Todo queda en la carpeta «Datos», al lado de Actualizador.exe:
+    Datos\opciones.json, fuentes.json…     tus opciones: valen en todos los equipos.
+    Datos\equipos\NOMBRE-DEL-EQUIPO\        lo de cada equipo: historial, ignoradas,
+                                            registros, diagnósticos y los controladores que
+                                            Windows no quiso aplicar en ese equipo.
+    Datos\cache\                           consultas guardadas por 12 horas (winget, Catálogo
+                                            de Microsoft Update): valen en todos los equipos.
+  Si en la carpeta no se puede escribir (un CD, un pendrive protegido contra escritura), esa vez
+  usa %LOCALAPPDATA%\Actualizador, como la instalada, y lo dice en «Más › Acerca de».
+
+  En el equipo quedan sólo los rastros que deja cualquier actualización hecha con Actualizador:
+  el registro de cambios de la empresa (C:\ProgramData\Actualizador\auditoria) y el Visor de
+  eventos (origen «Actualizador»). Si el equipo tiene una política de Actualizador (directiva de
+  grupo o C:\ProgramData\Actualizador\politica.json), la portable también la respeta.
+
+LO QUE LA PORTABLE NO HACE
+  - No aparece en el menú Inicio ni en Configuración › Aplicaciones: para quitarla, se borra la
+    carpeta.
+  - No programa revisiones automáticas (la tarea quedaría apuntando a un pendrive que la próxima
+    vez no está). Para eso, instalá Actualizador con Instalar.cmd de la entrega común.
+
+VERSIÓN NUEVA
+  Cerrá Actualizador y descomprimí la nueva en lugar de esta carpeta. Podés conservar «Datos».
+  Si en Opciones indicás dónde se publican las versiones nuevas (una carpeta o GitHub), avisa
+  cuando hay una.
+  Si venías usando la portable de SuperProgram (el nombre anterior), copiá su carpeta «Datos» al
+  lado de Actualizador.exe: seguís con tus opciones y el historial de cada equipo.
+
+SEGURIDAD
+  - Actualizador corre como administrador: guardá la portable en un pendrive tuyo o en una carpeta
+    donde sólo vos (o un administrador) puedan escribir. Si otro usuario del equipo pudiera
+    cambiar sus archivos, podría hacer que se ejecute algo suyo con permisos de administrador. La
+    instalada no tiene ese problema (está en Program Files).
+  - Desde una carpeta de red, abrila con la ruta completa (\\servidor\carpeta\Actualizador.exe):
+    con una unidad mapeada (Z:) Windows a veces no la encuentra al pedir el permiso de
+    administrador. O copiala al equipo.
+  - Cada archivo tiene su SHA-256 en SHA256SUMS.txt. Para controlar uno, en PowerShell:
+      Get-FileHash .\Actualizador.exe -Algorithm SHA256
+  - Si Smart App Control (Seguridad de Windows) está activado, Windows no deja abrir programas
+    sin firma de código: Actualizador tiene que estar firmado (Portable.cmd -CertificadoHuella …)
+    o hay que desactivarlo.
+
+REQUISITOS
+  Windows 10 (1809 o posterior), Windows 11 y Windows Server 2016 o posterior, de 64 bits.

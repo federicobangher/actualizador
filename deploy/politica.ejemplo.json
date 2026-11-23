@@ -1,0 +1,32 @@
+{
+  "_comentario": "Ejemplo de política de la empresa. Copialo como %ProgramData%\\Actualizador\\politica.json (o instalalo con Install-Actualizador.ps1 -Politica). Sólo se aplica si únicamente los administradores pueden modificarlo. La directiva de grupo (HKLM\\SOFTWARE\\Policies\\Actualizador) manda sobre este archivo. Referencia completa: docs\\POLITICAS.md",
+
+  "fuentes": {
+    "winget": true,
+    "navegadores": true,
+    "fabricante": true,
+    "github": false,
+    "sitio": true,
+    "windowsupdate": true,
+    "catalogo": true,
+    "fabricante_equipo": true,
+    "store": true
+  },
+
+  "bloquear": [
+    "Oracle.JavaRuntimeEnvironment*",
+    "TeamViewer*"
+  ],
+
+  "editoresPermitidos": [],
+
+  "permitirAbrirPaginas": true,
+  "permitirInstaladoresSinFirma": false,
+  "permitirForzarControladores": false,
+  "permitirInstalarWinget": true,
+  "permitirInstaladoresConVentana": false,
+  "exigirPuntoDeRestauracion": true,
+  "exigirAdministrador": false,
+  "bloquearOpciones": true,
+  "catalogoFuentesUrl": ""
+}

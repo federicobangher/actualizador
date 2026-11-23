@@ -1,0 +1,8 @@
+Nombre                      Id                                                           Versión        Disponible Origen
+---------------------------------------------------------------------------------------------------------------------------
+7-Zip 24.07 (x64)           7zip.7zip                                                    24.07          25.01      winget
+Controlador de impresora HP ARP\Machine\X64\{6F1C0D2E-1234-4ABC-9DEF-001122334455}       1.2.3
+Calculadora de Windows      Microsoft.WindowsCalculator_8wekyb3d8bbwe                    11.2405.2.0               msstore
+Microsoft.UI.Xaml.2.8       MSIX\Microsoft.UI.Xaml.2.8_8.2310.30001.0_x64__8wekyb3d8bbwe 8.2310.30001.0
+Git                         Git.Git                                                      2.46.0                    winget
+Programa sin versión        ARP\User\X64\ProgramaX                                       Desconocido

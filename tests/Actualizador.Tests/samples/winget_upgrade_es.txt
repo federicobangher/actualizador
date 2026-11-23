@@ -1,0 +1,6 @@
+Nombre                  Id                            Versión        Disponible    Origen
+------------------------------------------------------------------------------------------
+Google Chrome           Google.Chrome                 128.0.6613.120 129.0.6668.59 winget
+百度网盘                Baidu.BaiduNetdisk            7.40.0.3       7.44.0.5      winget
+Actualización de Java 8 Oracle.JavaRuntimeEnvironment 8.0.4110.9     8.0.4210.9    winget
+3 actualizaciones disponibles.

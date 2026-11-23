@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Pruebas del motor (sin paquetes de terceros: un ejecutable que corre todas y devuelve 0 si pasan). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0-windows</TargetFrameworks>
+    <TargetFrameworks Condition="'$(SpVerify)' == 'true'">net8.0</TargetFrameworks>
+    <RootNamespace>Actualizador.Tests</RootNamespace>
+    <StartupObject>Actualizador.Tests.Program</StartupObject>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Actualizador.Core\Actualizador.Core.csproj" />
+    <ProjectReference Include="..\..\src\Actualizador.Engine\Actualizador.Engine.csproj" />
+    <ProjectReference Include="..\..\src\Actualizador.Cli\Actualizador.Cli.csproj" />
+    <None Include="samples\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,7 @@
+{"url":"https://api.github.com/repos/ip7z/7zip/releases/260500001","html_url":"https://github.com/ip7z/7zip/releases/tag/26.05","id":260500001,"tag_name":"26.05","name":"7-Zip 26.05","draft":false,"prerelease":false,"published_at":"2026-10-21T10:00:00Z",
+"assets":[
+{"name":"7z2605-x64.exe","size":1650000,"digest":"sha256:AAAA0000111122223333444455556666777788889999AAAABBBBCCCCDDDDEEEE","browser_download_url":"https://github.com/ip7z/7zip/releases/download/26.05/7z2605-x64.exe"},
+{"name":"7z2605.exe","size":1300000,"digest":"sha256:1111111111111111111111111111111111111111111111111111111111111111","browser_download_url":"https://github.com/ip7z/7zip/releases/download/26.05/7z2605.exe"},
+{"name":"7z2605-arm64.exe","size":1600000,"browser_download_url":"https://github.com/ip7z/7zip/releases/download/26.05/7z2605-arm64.exe"},
+{"name":"7z2605-x64.msi","size":1900000,"digest":"sha256:2222222222222222222222222222222222222222222222222222222222222222","browser_download_url":"https://github.com/ip7z/7zip/releases/download/26.05/7z2605-x64.msi"}
+],"body":"7-Zip 26.05"}

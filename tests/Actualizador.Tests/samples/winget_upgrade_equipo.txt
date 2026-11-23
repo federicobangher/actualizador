@@ -1,0 +1,10 @@
+Nombre                             Id                              Versión             Disponible          Origen
+-----------------------------------------------------------------------------------------------------------------
+Microsoft.VCLibs.140.00.UWPDesktop Microsoft.VCLibs.Desktop.14     14.0.33519.0        14.0.33728.0        winget
+Microsoft.WindowsAppRuntime.1.4    Microsoft.WindowsAppRuntime.1.4 1.4.5               1.4.7               winget
+Microsoft.WindowsAppRuntime.1.5    Microsoft.WindowsAppRuntime.1.5 1.5.8               1.5.9               winget
+Microsoft.WindowsAppRuntime.1.6    Microsoft.WindowsAppRuntime.1.6 1.6.5               1.6.9               winget
+MicrosoftTeams                     Microsoft.Teams.Free            23119.303.2080.2726 26149.701.4759.8860 winget
+PDF24 Creator 11.34.0              geeksoftwareGmbH.PDF24Creator   11.34.0             11.35.0             winget
+7-Zip 24.08 (x64)                  7zip.7zip                       24.08               26.05               winget
+7 actualizaciones disponibles.

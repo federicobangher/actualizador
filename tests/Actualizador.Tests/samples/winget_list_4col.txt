@@ -1,0 +1,4 @@
+Name                Id                   Version Source
+--------------------------------------------------------
+Git                 Git.Git              2.46.0  winget
+Herramienta interna ARP\Machine\X86\Tool 3.0

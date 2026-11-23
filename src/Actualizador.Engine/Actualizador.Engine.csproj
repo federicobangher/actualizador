@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Motor: inventario de lo instalado y las fuentes de actualizaciones (winget, fabricantes, páginas oficiales, Windows Update,
+       Catálogo de Microsoft Update, herramienta del fabricante del equipo y Microsoft Store). -->
+  <PropertyGroup>
+    <TargetFrameworks>net8.0-windows</TargetFrameworks>
+    <TargetFrameworks Condition="'$(SpVerify)' == 'true'">net8.0;net48</TargetFrameworks>
+    <RootNamespace>Actualizador.Updates</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Actualizador.Core\Actualizador.Core.csproj" />
+    <InternalsVisibleTo Include="Actualizador.Tests" />
+  </ItemGroup>
+</Project>

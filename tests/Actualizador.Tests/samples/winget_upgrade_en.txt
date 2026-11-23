@@ -1,0 +1,17 @@
+   -    \    |    / 
+  ██████████████████████████████  5.12 MB / 5.12 MB
+
+Name                               Id                          Version       Available     Source
+---------------------------------------------------------------------------------------------------
+Microsoft Edge                     Microsoft.Edge              128.0.2739.67 129.0.2792.52 winget
+7-Zip 24.07 (x64)                  7zip.7zip                   24.07         25.01         winget
+Mozilla Firefox (x64 es-AR)        Mozilla.Firefox.es-AR       < 129.0.2     130.0         winget
+Zoom Workplace                     Zoom.Zoom                   Unknown       6.2.0.46690   winget
+Microsoft Visual C++ 2015-2022 Re… Microsoft.VCRedist.2015+.x… 14.38.33135.0 14.40.33810.0 winget
+WhatsApp                           9NKSQGP7F2NH                2.2434.6.0    2.2435.4.0    msstore
+6 upgrades available.
+
+The following packages have an upgrade available, but require explicit targeting for upgrade:
+Name                   Id                 Version Available Source
+-------------------------------------------------------------------
+Python 3.11.4 (64-bit) Python.Python.3.11 3.11.4  3.11.9    winget
