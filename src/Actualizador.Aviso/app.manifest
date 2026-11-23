@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
-  <assemblyIdentity version="2.0.36.0" name="Actualizador.Aviso" type="win32"/>
+  <assemblyIdentity version="2.0.37.0" name="Actualizador.Aviso" type="win32"/>
   <description>Actualizador - Aviso de actualizaciones</description>
 
   <!-- asInvoker A PROPÓSITO: lo abre la revisión programada (Programador de tareas) sin privilegios, y un programa que

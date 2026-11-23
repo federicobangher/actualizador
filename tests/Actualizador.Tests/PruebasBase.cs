@@ -340,6 +340,11 @@ namespace Actualizador.Tests
             Run("GitHub arma y publica la versión solo (sin descargar nada)", TestPublicaGitHub2036);
             Run("Publicar: la sesión de GitHub vale aunque no esté Git", TestSesionSinGit2036);
             Run("versión 2.0.36", TestVersion2036);
+            // --- 2.0.37 (Pruebas2037.cs)
+            Run("la portable busca su propia entrega y se actualiza sola", TestPortableBuscaSuEntrega2037);
+            Run("la portable: bajar, verificar y preparar su entrega", TestPortablePrepara2037);
+            Run("la portable: el guion que copia encima y la vuelve a abrir", TestGuionPortable2037);
+            Run("versión 2.0.37", TestVersion2037);
             Console.WriteLine();
             Console.WriteLine("Resultado: " + passed + " correctas, " + failed + " fallidas.");
             return failed == 0 ? 0 : 1;

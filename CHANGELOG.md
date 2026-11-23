@@ -1,5 +1,17 @@
 # Cambios
 
+## 2.0.37
+
+Pedido del usuario (23/11/2026, con captura): «en el portable se puede hacer que se actualice solo sin que se abra la página».
+
+- **La portable también se actualiza sola.** Antes avisaba y ofrecía abrir la página de GitHub. Ahora baja su propia entrega
+  (Actualizador-x.y.z-portable.zip, verificada con su SHA-256), se cierra, copia los archivos nuevos encima de los de su carpeta y se
+  vuelve a abrir. La carpeta «Datos» (opciones, historial y registros de cada equipo) no se toca y no se borra nada. Si la carpeta no se
+  puede escribir (un pendrive protegido, por ejemplo), sigue avisando como antes.
+- Cada versión publicada trae también la portable: el .zip con su .sha256 para la actualización sola y el .7z para usarla a mano.
+- El guion de la actualización sola se escribe en UTF-8: las carpetas con acentos funcionan.
+- Pruebas nuevas (Pruebas2037.cs).
+
 ## 2.0.36
 
 Pedido del usuario (23/11/2026): «que no tenga que descargar nada, como Virtual Pet».

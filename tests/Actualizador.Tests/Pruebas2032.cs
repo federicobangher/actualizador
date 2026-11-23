@@ -46,8 +46,7 @@ namespace Actualizador.Tests
             r = new SelfUpdate.Result { Latest = "2.0.33", Newer = true };
             SelfUpdate.PickAsset(GitHubRules.ParseRelease(json.Replace(",\"digest\":\"sha256:" + sha + "\"", "")), r, null);
             Check(!r.CanInstall, "sin SHA-256 publicado no se instala sola (sólo avisa)");
-            Check(SelfInstall.CannotInstall(true, true) != null && SelfInstall.CannotInstall(false, false) != null && SelfInstall.CannotInstall(false, true) == null,
-                  "la portable y sin administrador sólo avisan");
+            Check(SelfInstall.CannotInstall(false, false) != null && SelfInstall.CannotInstall(false, true) == null, "sin administrador sólo avisa");
         }
 
         static string Entrega2032(string dir, string extra)

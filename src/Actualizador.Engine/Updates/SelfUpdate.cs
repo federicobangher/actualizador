@@ -54,6 +54,12 @@ namespace Actualizador.Updates
         public static string AssetNameFor(string version) { return AppInfo.Name + "-" + version + ".zip"; }
 
         /// <summary>
+        /// 2.0.37 (pedido del usuario, 23/11/2026: «en el portable se puede hacer que se actualice solo sin que se abra la página»): la
+        /// portable se actualiza con su propia entrega, «Actualizador-2.0.37-portable.zip» (la publica Publicar.ps1 al lado de la otra).
+        /// </summary>
+        public static string AssetNameFor(string version, bool portable) { return AppInfo.Name + "-" + version + (portable ? "-portable" : "") + ".zip"; }
+
+        /// <summary>
         /// 2.0.32: la entrega .zip de esa versión entre los archivos publicados, con su SHA-256: el que informa GitHub («digest») o, si no,
         /// el de «Actualizador-x.y.z.zip.sha256» (lo publica Publicar.ps1). <paramref name="shaFiles"/>: el contenido de esos .sha256, por URL.
         /// </summary>
@@ -167,6 +173,12 @@ namespace Actualizador.Updates
 
         public static Result Check(string source, string current)
         {
+            return Check(source, current, AppInfo.IsPortable);
+        }
+
+        /// <summary>Como <see cref="Check(string, string)"/>, buscando la entrega de la portable o la de la instalada.</summary>
+        public static Result Check(string source, string current, bool portable)
+        {
             var r = new Result();
             r.Checked = DateTime.Now;
             string value;
@@ -185,7 +197,7 @@ namespace Actualizador.Updates
                     if (!m.Success) { r.Error = "la última versión de " + value + " no tiene número («" + tag + "»)"; return r; }
                     r.Latest = m.Value;
                     r.Where = "https://github.com/" + value + "/releases/tag/" + Uri.EscapeDataString(tag);
-                    string asset = AssetNameFor(r.Latest);
+                    string asset = AssetNameFor(r.Latest, portable);
                     string assetUrl = "https://github.com/" + value + "/releases/download/" + Uri.EscapeDataString(tag) + "/" + asset;
                     try
                     {
@@ -205,7 +217,7 @@ namespace Actualizador.Updates
                         names.AddRange(Directory.GetDirectories(value, prefix + "*"));
                     }
                     string name;
-                    r.Latest = NewestDelivery(names, out name) ?? "";
+                    r.Latest = NewestDelivery(names, portable, out name) ?? "";
                     r.Where = name ?? value;
                     if (r.Latest.Length == 0) { r.Error = "no hay entregas de Actualizador (Actualizador-x.y.z.7z) en " + value; return r; }
                 }

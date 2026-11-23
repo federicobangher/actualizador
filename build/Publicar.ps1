@@ -94,6 +94,24 @@ $archivos = @($zip, "$zip.sha256")
 $sieteZ = Join-Path $dist "$nombre.7z"
 if (Test-Path -LiteralPath $sieteZ) { $archivos += $sieteZ }
 
+# --- 2.0.37 (pedido del usuario: «en el portable se puede hacer que se actualice solo sin que se abra la página»): la portable, para
+# que cada portable se actualice sola (.zip con su .sha256) y para usarla a mano (.7z). Las pruebas ya corrieron arriba.
+& (Join-Path $PSScriptRoot 'EmpaquetarPortable.ps1') -SinPruebas
+$nombrePortable = "$nombre-portable"
+$armadoPortable = Join-Path $raiz "obj\entrega\$nombrePortable"
+if (-not (Test-Path -LiteralPath (Join-Path $armadoPortable 'Actualizador.portable'))) { throw "No se encontró la portable armada en $armadoPortable." }
+Write-Paso 'Portable para la actualización automática (.zip)'
+$zipPortable = Join-Path $dist "$nombrePortable.zip"
+if (Test-Path -LiteralPath $zipPortable) { Remove-Item -LiteralPath $zipPortable -Force }
+Compress-Archive -Path (Join-Path $armadoPortable '*') -DestinationPath $zipPortable -CompressionLevel Optimal
+$hp = (Get-FileHash -LiteralPath $zipPortable -Algorithm SHA256).Hash.ToLowerInvariant()
+[IO.File]::WriteAllText("$zipPortable.sha256", "$hp  $nombrePortable.zip`r`n", (New-Object Text.UTF8Encoding($false)))
+Write-Host "$zipPortable"
+Write-Host "SHA-256: $hp"
+$archivos += @($zipPortable, "$zipPortable.sha256")
+$sieteZPortable = Join-Path $dist "$nombrePortable.7z"
+if (Test-Path -LiteralPath $sieteZPortable) { $archivos += $sieteZPortable }
+
 # --- Notas: la sección de esta versión en CHANGELOG.md
 $notas = Join-Path $raiz "obj\notas-$version.md"
 $lineas = Get-Content -LiteralPath (Join-Path $raiz 'CHANGELOG.md') -Encoding UTF8
