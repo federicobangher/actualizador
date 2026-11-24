@@ -42,14 +42,17 @@ namespace Actualizador.Updates
 
         /// <summary>
         /// 2.0.41 (usuario, 24/11/2026: «los programas que dan error, después vuelvo a buscar y aparecen donde dice todo al día por más que
-        /// no esté actualizado; en Vigía sigue figurando»): una fila que quedó «Al día», «No verificable» o «Error» pero dice una versión
-        /// disponible MÁS NUEVA que la instalada (las dos se pueden comparar) está desactualizada, venga de donde venga ese estado: va a
-        /// «Disponibles» (sin marcarse sola) y cuenta como pendiente. Lo ignorado a propósito por el usuario no cambia.
+        /// no esté actualizado; en Vigía sigue figurando»): una fila que quedó «No verificable» o «Error» pero dice una versión disponible
+        /// MÁS NUEVA que la instalada (las dos se pueden comparar) está desactualizada: va a «Disponibles» (sin marcarse sola) y cuenta como
+        /// pendiente. Lo ignorado a propósito por el usuario no cambia.
+        /// 2.0.43 (grabación del usuario, 24/11/2026 18:43): «Al día» NO entra. Es un veredicto a propósito de quien compara: «Microsoft Visual
+        /// C++ 2012 Redistributable (x64) - 11.0.50727» (11.0.50727.1, disponible 11.0.61030) está al día porque convive con la 11.0.61030, que
+        /// es la que usan los programas. La 2.0.42 la mostraba en «Disponibles» («Hay 1 actualización disponible», estado «Al día», sin casilla).
         /// </summary>
         public static bool KnownOutdated(UpdateCandidate u)
         {
             if (u == null || u.IgnoredBy != null) return false;
-            if (u.Status != UpdateStatus.AlDia && u.Status != UpdateStatus.NoVerificable && u.Status != UpdateStatus.Error) return false;
+            if (u.Status != UpdateStatus.NoVerificable && u.Status != UpdateStatus.Error) return false;
             string inst = (u.InstalledVersion ?? "").Trim(), avail = (u.AvailableVersion ?? "").Trim();
             if (inst.Length == 0 || avail.Length == 0 || WingetTable.IsTruncated(avail)) return false;
             if (VersionUtil.Parse(inst) == null || VersionUtil.Parse(avail) == null) return false;

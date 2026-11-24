@@ -16,7 +16,7 @@ namespace Actualizador.Tests
         static void TestFallaNoPasaAAlDia2042()
         {
             // 1) La red de seguridad: una versión más nueva conocida nunca queda en «Al día y sin verificar».
-            foreach (var st in new[] { UpdateStatus.NoVerificable, UpdateStatus.Error, UpdateStatus.AlDia })
+            foreach (var st in new[] { UpdateStatus.NoVerificable, UpdateStatus.Error })
             {
                 var c = new UpdateCandidate { Name = "X", Kind = UpdateKind.Programa, Status = st, InstalledVersion = "1.2026.922.300", AvailableVersion = "1.2026.1026.100" };
                 Check(UpdateGroups.KnownOutdated(c) && UpdateGroups.ViewOf(c) == UpdateView.Pendientes && UpdateGroups.IsPending(c) && !UpdateGroups.ShouldPremark(c),
@@ -92,6 +92,27 @@ namespace Actualizador.Tests
             bool rechazo = false;
             try { WingetProvider.ProvisionFromInstalledScript(new List<string> { "Microsoft.Outlook" }, "1.0'; calc; '"); } catch (ArgumentException) { rechazo = true; }
             Check(rechazo, "una versión rara no entra al guion");
+        }
+
+        /// <summary>
+        /// Grabación del usuario (24/11/2026, 18:43), con la 2.0.42: «Hay 1 actualización disponible» y en «Disponibles» una sola fila,
+        /// «Microsoft Visual C++ 2012 Redistributable (x64) - 11.0.50727», 11.0.50727.1 → 11.0.61030, estado «Al día», sin casilla.
+        /// </summary>
+        static void TestRuntimeQueConviveSigueAlDia2043()
+        {
+            var vc = new UpdateCandidate { Name = "Microsoft Visual C++ 2012 Redistributable (x64) - 11.0.50727", Kind = UpdateKind.Programa, Status = UpdateStatus.AlDia,
+                                           InstalledVersion = "11.0.50727.1", AvailableVersion = "11.0.61030", ProviderName = VendorProvider.ProviderId,
+                                           Detail = "Convive con «Microsoft Visual C++ 2012 Redistributable (x64) - 11.0.61030» (11.0.61030.0), la última versión, que es la que usan los programas: esta entrada queda por compatibilidad." };
+            Check(!UpdateGroups.KnownOutdated(vc), "el veredicto «Al día» de quien compara se respeta");
+            Eq(UpdateGroup.AlDia, UpdateGroups.Of(vc), "va a «Al día y sin verificar»");
+            Check(!UpdateGroups.IsPending(vc) && UpdateGroups.ViewOf(vc) == UpdateView.Revisados, "no cuenta como pendiente");
+            var k = UpdateGroups.Count(new List<UpdateCandidate> { vc });
+            Eq(0, k.ToUpdate + k.Optional, "«Hay 0 actualizaciones», no «Hay 1»");
+        }
+
+        static void TestVersion2043()
+        {
+            Check(VersionUtil.Compare(AppInfo.Version, "2.0.43") >= 0, "Actualizador 2.0.43 o posterior: " + AppInfo.Version);
         }
 
         static void TestVersion2042()

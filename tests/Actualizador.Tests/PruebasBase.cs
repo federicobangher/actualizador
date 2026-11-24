@@ -371,6 +371,9 @@ namespace Actualizador.Tests
             // --- 2.0.42 (Pruebas2042.cs)
             Run("lo que falla no pasa a «Al día» (Outlook para todos los usuarios, la captura de las 18:21)", TestFallaNoPasaAAlDia2042);
             Run("versión 2.0.42", TestVersion2042);
+            // --- 2.0.43 (en Pruebas2042.cs)
+            Run("Visual C++ 2012 que convive con la 11.0.61030 sigue «Al día» (la grabación de las 18:43)", TestRuntimeQueConviveSigueAlDia2043);
+            Run("versión 2.0.43", TestVersion2043);
             Console.WriteLine();
             Console.WriteLine("Resultado: " + passed + " correctas, " + failed + " fallidas.");
             return failed == 0 ? 0 : 1;

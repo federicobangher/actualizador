@@ -55,7 +55,7 @@ Hace falta el **SDK de .NET 8** sólo en el equipo donde se compila (`winget ins
 ```
 powershell -ExecutionPolicy Bypass -File build\Build.ps1         # compila y corre las pruebas
 powershell -ExecutionPolicy Bypass -File build\Publish.ps1       # publish\Actualizador (con .NET adentro)
-powershell -ExecutionPolicy Bypass -File build\Empaquetar.ps1    # dist\Actualizador-2.0.42.7z para los equipos (.zip sin 7-Zip)
+powershell -ExecutionPolicy Bypass -File build\Empaquetar.ps1    # dist\Actualizador-2.0.43.7z para los equipos (.zip sin 7-Zip)
 Instalar.cmd                                                     # publica (si hace falta) e instala en este equipo
 Instalar.cmd /quitar                                             # desinstala (también: Configuración › Aplicaciones, o Más › Desinstalar)
 Publicar.cmd                                                     # publica esta versión en GitHub: los equipos se actualizan solos
@@ -73,7 +73,7 @@ Firma de código: `build\Publish.ps1 -CertificadoHuella <huella>` (o `-Pfx archi
 Además de la que se instala, una que **no se instala**: para llevar en un pendrive y usar equipo por equipo.
 
 ```
-Portable.cmd                                                     # dist\Actualizador-2.0.42-portable.7z (o .zip sin 7-Zip)
+Portable.cmd                                                     # dist\Actualizador-2.0.43-portable.7z (o .zip sin 7-Zip)
 powershell -ExecutionPolicy Bypass -File build\EmpaquetarPortable.ps1 -CertificadoHuella <huella>   # firmada
 ```
 

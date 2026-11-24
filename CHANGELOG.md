@@ -1,5 +1,16 @@
 # Cambios
 
+## 2.0.43
+
+Grabación del usuario (24/11/2026, 18:43), con la 2.0.42: «Hay 1 actualización disponible» y en «Disponibles» una sola fila, «Microsoft
+Visual C++ 2012 Redistributable (x64) - 11.0.50727» (11.0.50727.1 → 11.0.61030), con estado «Al día» y sin casilla para marcar.
+
+- **Arreglado (lo había roto la 2.0.42):** la red de seguridad nueva («lo que tiene una versión más nueva no va a "Al día"») también
+  tomaba las filas que quien compara declaró «Al día» a propósito. Esa entrada de Visual C++ 2012 está al día: convive con la 11.0.61030,
+  que es la que usan los programas, y queda por compatibilidad. Ahora la red de seguridad sólo mira lo «No verificable» o con «Error»;
+  un «Al día» se respeta. Lo de Outlook (lo que falla no pasa a «Al día») sigue igual.
+- Prueba nueva con esa fila exacta.
+
 ## 2.0.42
 
 Capturas del usuario (24/11/2026): a las 18:14 «Microsoft.OutlookForWindows (para todos los usuarios) 1.2026.922.300 → 1.2026.1026.100: Falló
