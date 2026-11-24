@@ -471,7 +471,10 @@ try {
     $exe = Join-Path $Destino 'Actualizador.exe'
     # Ruta completa de PowerShell (no se busca en el PATH) y el script entre comillas. El script pide el permiso de
     # administrador por su cuenta: Configuración abre los desinstaladores sin elevar.
-    $powershellExe = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    # 2.0.41 (relevamiento): la carpeta de sistema de Windows, no la variable SystemRoot: el usuario puede redefinirla en su
+    # cuenta, este proceso elevado la hereda y la entrada de «Aplicaciones» quedaba apuntando a SU powershell.exe (que después
+    # ejecutaría un administrador al desinstalar).
+    $powershellExe = Join-Path ([Environment]::SystemDirectory) 'WindowsPowerShell\v1.0\powershell.exe'
     $desinstalar = '"' + $powershellExe + '" -NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $Destino 'Uninstall-Actualizador.ps1') + '"'
     New-Item -Path $ClaveDesinstalar -Force | Out-Null
     $tam = [int]((Get-ChildItem -LiteralPath $Destino -Recurse -File | Measure-Object -Property Length -Sum).Sum / 1KB)

@@ -165,7 +165,7 @@ namespace Actualizador.App
                 return;
             try
             {
-                var psi = new System.Diagnostics.ProcessStartInfo(SelfUninstall.PowerShellPath(Environment.GetEnvironmentVariable("SystemRoot")),
+                var psi = new System.Diagnostics.ProcessStartInfo(SelfUninstall.PowerShellPath(SafePaths.Windows),
                                                                  SelfUninstall.Arguments(script, false));
                 // Con ventana: el desinstalador muestra lo que va quitando y espera Enter al final.
                 psi.UseShellExecute = true;

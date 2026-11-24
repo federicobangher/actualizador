@@ -39,6 +39,7 @@ namespace Actualizador.Updates
                         case VendorInstall.AdobeMsp: InstallAdobe(ctx, c, plan, changed); break;
                         case VendorInstall.OfficeClickToRun: InstallOffice(ctx, c, plan, changed); break;
                         case VendorInstall.Starter4j: InstallStarter(ctx, c, plan, changed); break;
+                        case VendorInstall.TorBrowser: InstallTor(ctx, c, plan, changed); break;
                         default: InstallerSupport.Fail(c, "Este programa se actualiza a mano: " + (plan.Check != null ? plan.Check.HowToUpdate : "")); break;
                     }
                 }
@@ -93,6 +94,7 @@ namespace Actualizador.Updates
         /// </summary>
         public static bool ClosesProcesses(VendorPlan plan)
         {
+            if (plan != null && plan.Check != null && plan.Check.Install == VendorInstall.TorBrowser) return !string.IsNullOrEmpty(plan.TorRoot);
             return plan != null && plan.Processes != null && plan.Processes.Length > 0;
         }
 

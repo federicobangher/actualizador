@@ -107,11 +107,11 @@ namespace Actualizador.Tests
             Check(u.Contains("Actualizador.anterior-*"), "quita las carpetas apartadas por instalaciones que no terminaron");
             Check(u.Contains("Get-Perfiles") && u.Contains("AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs"), "accesos directos de todos los usuarios (antes sólo los comunes)");
             Check(u.Contains("(Split-Path -Leaf $destino) -eq 'Actualizador'") && u.Contains("Test-Enlace $destino"), "sólo borra una carpeta «Actualizador» que no sea un enlace");
-            Check(u.Contains("Set-Location -LiteralPath $env:SystemRoot"), "la consola no queda parada en la carpeta que se borra");
+            Check(u.Contains("Set-Location -LiteralPath $Sistema"), "la consola no queda parada en la carpeta que se borra");
             Check(u.Contains("desinstalacion.log") && u.Contains("Start-Transcript"), "deja registro");
 
             // Instalador: la entrada apunta al PowerShell de Windows por ruta completa y el script queda en la carpeta.
-            Check(i.Contains("$powershellExe = Join-Path $env:SystemRoot 'System32\\WindowsPowerShell\\v1.0\\powershell.exe'") &&
+            Check(i.Contains("$powershellExe = Join-Path ([Environment]::SystemDirectory) 'WindowsPowerShell\\v1.0\\powershell.exe'") &&
                   i.Contains("$desinstalar = '\"' + $powershellExe + '\" -NoProfile"), "UninstallString con la ruta completa de PowerShell, entre comillas");
             Check(i.Contains("Falta Uninstall-Actualizador.ps1 en la entrega"), "el instalador comprueba que el desinstalador quede junto al programa");
             Check(i.Contains("Actualizador - terminar de desinstalar"), "el instalador cancela un borrado pendiente (si no, al reiniciar borraría la instalación nueva)");

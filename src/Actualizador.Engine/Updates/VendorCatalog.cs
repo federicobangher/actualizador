@@ -54,7 +54,9 @@ namespace Actualizador.Updates
         /// instalador de la última (Fortinet). La versión sale del nombre final del archivo o de sus recursos
         /// (<see cref="OfficialInstaller"/>), y ese mismo archivo es el que se instala.
         /// </summary>
-        OfficialInstaller
+        OfficialInstaller,
+        /// <summary>2.0.41: el archivo de versiones de Tor Browser de la plataforma instalada (<see cref="Updates.TorBrowser"/>).</summary>
+        TorBrowser
     }
 
     /// <summary>Cómo se instala la versión nueva.</summary>
@@ -74,7 +76,12 @@ namespace Actualizador.Updates
         /// 2.0.19: lo mismo que hace el arranque starter4j del programa (TLauncher): baja los archivos de la versión nueva verificando el
         /// SHA-1 que publica su configuración oficial y anota la versión en «starter.json» (<see cref="Updates.Starter4j"/>).
         /// </summary>
-        Starter4j
+        Starter4j,
+        /// <summary>
+        /// 2.0.41: Tor Browser (portable): su instalador oficial verificado (firma de The Tor Project y SHA-256 publicado) se instala en
+        /// silencio en la misma carpeta y se conservan los datos del usuario (<see cref="Updates.TorBrowser"/>).
+        /// </summary>
+        TorBrowser
     }
 
     /// <summary>Un programa cuya última versión se consulta en la fuente oficial del fabricante.</summary>
@@ -483,21 +490,22 @@ namespace Actualizador.Updates
             // verificar, o el programa se actualiza solo). También se comparan las copias portables (sin entrada en el registro).
 
             // Tor Browser: la versión publicada sale del mismo archivo que consulta la página de descargas de The Tor Project; la
-            // instalada, de tbb_version.json (su ejecutable y el registro dicen la de Firefox ESR, 140.x). Se actualiza solo.
+            // instalada, de tbb_version.json (su ejecutable y el registro dicen la de Firefox ESR, 140.x).
+            // 2.0.41: se actualiza desde acá (antes sólo se comparaba y «Actualizar» abría la página): ver TorBrowser.
             var tor = new VendorCheck();
             tor.Id = "tor-browser";
             tor.Vendor = "The Tor Project (torproject.org)";
             tor.Product = "Tor Browser";
             tor.Name = new Regex(@"^Tor Browser(?: \d+(?:\.\d+){0,3})?$", RX);
-            tor.Url = "https://aus1.torproject.org/torbrowser/update_3/release/downloads.json";
+            tor.Url = TorBrowser.LegacyFeed;
             tor.InfoUrl = "https://www.torproject.org/download/";
             tor.Domain = "torproject.org";
-            tor.Feed = VendorFeed.PageRegex;
-            tor.Version = new Regex(@"""version""\s*:\s*""(?<v>\d{1,3}(?:\.\d{1,4}){1,3})""", RX);
-            tor.Install = VendorInstall.None;
+            tor.Feed = VendorFeed.TorBrowser;
+            tor.Install = VendorInstall.TorBrowser;
+            tor.Signers = TorBrowser.Signers;
             tor.VersionFiles = new[] { @"tbb_version.json", @"Browser\tbb_version.json", @"..\Browser\tbb_version.json",
                                        @"TorBrowser\Docs\ChangeLog.txt", @"Browser\TorBrowser\Docs\ChangeLog.txt" };
-            tor.Recommended = false;
+            tor.Recommended = true;
             tor.HowToUpdate = "Tor Browser se actualiza solo: abrilo y, cuando avise, tocá «Reiniciar para actualizar» (o ☰ › Ayuda › Acerca de Tor Browser). " +
                               "También se puede bajar de su página oficial.";
             tor.Note = "Su ejecutable dice la versión de Firefox ESR (140.x): se compara la de Tor Browser.";

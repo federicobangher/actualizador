@@ -359,6 +359,15 @@ namespace Actualizador.Tests
             Run("un instalador que en silencio se niega (NSIS 2) se abre con su ventana", TestSeNiegaEnSilencioSeAbreConVentana2040);
             Run("Npcap por winget: con --interactive, sólo esa fila", TestNpcapPorWinget2040);
             Run("versión 2.0.40", TestVersion2040);
+            // --- 2.0.41 (Pruebas2041.cs)
+            Run("Tor Browser: el archivo de versiones, el instalador oficial y su SHA-256", TestTorFuentes2041);
+            Run("Tor Browser: su carpeta y cuándo se actualiza desde acá", TestTorCarpeta2041);
+            Run("Tor Browser: los guiones (apartar, instalar, copiar los datos, volver atrás)", TestTorGuiones2041);
+            Run("Tor Browser 16.0.1 → 16.0.3 se actualiza solo (la captura)", TestTorSeActualizaSolo2041);
+            Run("Tor Browser: lo que no se verifica no se ejecuta, y si no queda vuelve atrás", TestTorVerificaYVuelveAtras2041);
+            Run("Tor Browser abierto: sólo se cierra el de su carpeta", TestTorAbierto2041);
+            Run("relevamiento: nada elevado toma rutas de %SystemRoot% ni nombres sueltos", TestRelevamientoRutas2041);
+            Run("versión 2.0.41", TestVersion2041);
             Console.WriteLine();
             Console.WriteLine("Resultado: " + passed + " correctas, " + failed + " fallidas.");
             return failed == 0 ? 0 : 1;

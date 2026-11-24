@@ -152,7 +152,7 @@ namespace Actualizador.Updates
                 throw new ArgumentException("ruta no válida para el guion de instalación");
             var sb = new StringBuilder();
             sb.Append("@echo off\r\n");
-            sb.Append("chcp 65001 >nul\r\n");
+            sb.Append(Utf8Console);
             sb.Append("cd /d \"").Append(stagedDir).Append("\"\r\n");
             // Hasta 2 minutos esperando que Actualizador termine de cerrarse.
             sb.Append("\"").Append(powershell).Append("\" -NoProfile -Command \"Wait-Process -Id ").Append(pid).Append(" -Timeout 120 -ErrorAction SilentlyContinue\"\r\n");
@@ -172,7 +172,14 @@ namespace Actualizador.Updates
         /// 2.0.38 (relevamiento): antes de abrir Actualizador y de borrar lo bajado, el guion sale de esa carpeta. Si no, Actualizador arrancaba
         /// con su carpeta de trabajo ahí adentro y «rd /s /q» no podía borrarla (cmd tampoco: estaba parado en ella): quedaba en C:\Windows\Temp.
         /// </summary>
-        const string LeaveStaging = "cd /d \"%SystemRoot%\\System32\"\r\n";
+        /// 2.0.41 (relevamiento): por ruta completa. El guion corre elevado y %SystemRoot% lo hereda del usuario, que puede redefinirlo:
+        /// Actualizador quedaba abierto, como administrador, parado en una carpeta elegida por el usuario.
+        /// </summary>
+        public static string LeaveStaging { get { return "cd /d \"" + SafePaths.System32 + "\"\r\n"; } }
+
+        /// <summary>2.0.41: UTF-8 en la consola, con chcp.com por ruta completa (no el que haya en la carpeta actual o en el PATH).</summary>
+        public static string Utf8Console { get { return "\"" + SafePaths.System32 + "\\chcp.com\" 65001 >nul\r\n"; } }
+        /// <summary>
 
         /// <summary>La carpeta de la portable con las opciones, el historial y los registros: nunca se toca.</summary>
         public const string PortableDataFolder = "Datos";
@@ -188,7 +195,7 @@ namespace Actualizador.Updates
             string dir = portableDir.TrimEnd('\\');
             var sb = new StringBuilder();
             sb.Append("@echo off\r\n");
-            sb.Append("chcp 65001 >nul\r\n");
+            sb.Append(Utf8Console);
             sb.Append("cd /d \"").Append(stagedDir).Append("\"\r\n");
             sb.Append("\"").Append(powershell).Append("\" -NoProfile -Command \"Wait-Process -Id ").Append(pid).Append(" -Timeout 120 -ErrorAction SilentlyContinue\"\r\n");
             // Sin /PURGE ni /MIR: no se borra nada de la carpeta. /XD: «Datos» no se copia ni se toca. Hasta 10 reintentos de 3 segundos.

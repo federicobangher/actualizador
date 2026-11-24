@@ -1382,8 +1382,10 @@ namespace Actualizador.Updates
                     if (plan == null || !VendorProvider.ClosesProcesses(plan)) continue;
                     if (all == null) all = RunningPrograms.Snapshot();
                     // 2.0.19: TLauncher también por la carpeta de su arranque (su Java no se llama «TLauncher»).
-                    open = RunningPrograms.Closable(plan.Check != null && plan.Check.Install == VendorInstall.Starter4j
-                        ? VendorProvider.StarterRunning(all, plan) : RunningPrograms.ByName(all, plan.Processes));
+                    // 2.0.41: Tor Browser por su carpeta (su firefox.exe no es el Firefox del equipo).
+                    open = RunningPrograms.Closable(plan.Check != null && plan.Check.Install == VendorInstall.Starter4j ? VendorProvider.StarterRunning(all, plan)
+                                                  : plan.Check != null && plan.Check.Install == VendorInstall.TorBrowser ? VendorProvider.TorRunning(all, plan)
+                                                  : RunningPrograms.ByName(all, plan.Processes));
                 }
                 else if (c.ProviderName == SiteProvider.ProviderId && c.ProviderTag is SitePlan && ((SitePlan)c.ProviderTag).Program != null)
                 {

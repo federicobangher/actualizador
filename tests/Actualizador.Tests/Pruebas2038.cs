@@ -39,7 +39,7 @@ namespace Actualizador.Tests
             string portable = SelfInstall.PortableScript(@"C:\Windows\Temp\Actualizador-1\entrega", 7, @"C:\ps.exe", @"C:\Windows\System32\robocopy.exe", @"E:\Actualizador", @"C:\Windows\Temp\Actualizador-1\i.log");
             foreach (string s in new[] { instalada, portable })
             {
-                int sale = s.IndexOf("cd /d \"%SystemRoot%\\System32\"", StringComparison.Ordinal);
+                int sale = s.IndexOf("cd /d \"" + SafePaths.System32 + "\"", StringComparison.Ordinal);   // 2.0.41: por ruta completa
                 int abre = s.IndexOf("start \"\"", StringComparison.Ordinal);
                 int borra = s.IndexOf("rd /s /q", StringComparison.Ordinal);
                 Check(sale > 0 && abre > sale && borra > sale, "sale de la carpeta bajada antes de abrir Actualizador y de borrarla");

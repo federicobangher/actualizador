@@ -1,5 +1,34 @@
 # Cambios
 
+## 2.0.41
+
+Captura del usuario (24/11/2026): Tor Browser 16.0.1 → 16.0.3 «Pendiente: Se abrió su página (www.torproject.org)»; «ese navegador no
+actualiza, me abre la página para descargar, no es la idea, quiero que actualice». Y relevamiento de errores y vulnerabilidades.
+
+- **Tor Browser se actualiza solo.** Antes sólo se comparaba la versión y «Actualizar» abría www.torproject.org. Ahora:
+  - la versión y el instalador salen del archivo que consulta la página de descargas de The Tor Project para la arquitectura instalada
+    (download-windows-x86_64.json o el de 32 bits; si no responde, el anterior downloads.json);
+  - el instalador se baja sólo de torproject.org por HTTPS, tiene que tener el nombre oficial de ESA versión y arquitectura, su SHA-256
+    tiene que coincidir con el que publica The Tor Project al lado (sha256sums-signed-build.txt) y su firma digital tiene que ser
+    válida, no revocada y de The Tor Project. Sin cualquiera de esas cosas no se ejecuta nada;
+  - con Tor Browser cerrado (se ofrece cerrar SÓLO lo que corre desde su carpeta, nunca el Firefox del equipo), su carpeta se aparta
+    («Tor Browser (anterior)»), la versión nueva se instala en silencio en la misma carpeta y se comprueba con tbb_version.json;
+  - se copian los marcadores, la configuración, los puentes y el estado de Tor (Browser\TorBrowser\Data, sin los archivos de fábrica
+    nuevos: torrc-defaults, geoip) y recién entonces se borra la carpeta anterior;
+  - si la versión nueva no quedó o no se pudieron copiar los datos, se vuelve todo atrás: la carpeta anterior vuelve a su lugar;
+  - en el Escritorio (o cualquier carpeta del usuario) todo eso lo hace un guion que corre como el usuario, sin privilegios de
+    administrador; en Program Files, como administrador.
+  Deja de ser opcional (violeta): se marca con «Marcar todo» como cualquier actualización verificable.
+- **Relevamiento: rutas tomadas de %SystemRoot% en procesos elevados.** Un usuario puede redefinir esa variable en su cuenta y un
+  proceso elevado la hereda. Se corrigió en: la entrada de «Aplicaciones» que arma el instalador (quedaba apuntando al powershell.exe de
+  esa carpeta, que después ejecutaba un administrador al desinstalar), el borrado al reiniciar del desinstalador (RunOnce, como
+  administrador), «Desinstalar Actualizador» de la ventana, y los guiones de la actualización sola (chcp y la carpeta de trabajo).
+  Ahora todo usa la carpeta de sistema real de Windows.
+- **Relevamiento: «Abrir la carpeta» (Opciones) abría «explorer.exe» por nombre suelto desde la ventana elevada.** Windows lo busca
+  primero en la carpeta del programa (en la portable la puede escribir un usuario común) y el Explorador quedaba como administrador.
+  Ahora se abre como las demás carpetas: el Explorador de Windows por ruta completa, en la sesión normal del usuario.
+- Pruebas nuevas (Pruebas2041.cs).
+
 ## 2.0.40
 
 Captura del usuario (23/11/2026), «seguimos con los errores»: Npcap 1.82 → 1.90 «Falló la instalación»: «El instalador verificado

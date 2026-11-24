@@ -112,7 +112,9 @@ namespace Actualizador.Tests
             Check(tor != null, "Tor Browser en el catálogo");
             string json = "{\n  \"version\" : \"16.0\",\n  \"downloads\" : {\n    \"win64\" : {\n      \"ALL\" : {\n        \"binary\" : \"https://dist.torproject.org/torbrowser/16.0/tor-browser-windows-x86_64-portable-16.0.exe\"\n      }\n    }\n  }\n}";
             string url;
-            Eq("16.0", VendorCatalog.ParsePage(tor, json, out url), "la versión publicada por The Tor Project");
+            // 2.0.41: lo lee TorBrowser.ParseFeed (también el archivo de la plataforma); ver Pruebas2041.
+            var torRel = TorBrowser.ParseFeed(json, "x64");
+            Eq("16.0", torRel != null ? torRel.Version : "", "la versión publicada por The Tor Project");
             var torProg = Prog208("Tor Browser", "140.17.0", @"C:\Users\Fede\Desktop\Tor Browser\Browser", "");
             torProg.Unregistered = true;     // copia descomprimida en el Escritorio, encontrada por su acceso directo
             var oldFetch = VendorProvider.FetchForTests;
@@ -136,7 +138,8 @@ namespace Actualizador.Tests
                     Eq(UpdateStatus.Disponible, row.Status, "hay una versión nueva");
                     var all = new List<UpdateCandidate> { row };
                     UpdateManager.MakeManualActionable(all);
-                    Check(row.Installable && row.ProviderName == SiteProvider.ProviderId, "se puede marcar: abre la página oficial de descarga");
+                    // 2.0.41: acá no se encuentra su carpeta (no hay archivos de verdad): queda abrir la página. Con la carpeta, se instala sola (Pruebas2041).
+                    Check(row.Installable && row.ProviderName == SiteProvider.ProviderId, "sin su carpeta: se puede marcar y abre la página oficial de descarga");
                 }
                 // Sin el archivo de versión no se compara (140 contra 16 diría cualquier cosa).
                 VendorProvider.ReadFileForTests = delegate(string path) { return null; };

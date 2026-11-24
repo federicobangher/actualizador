@@ -1,7 +1,7 @@
 <Project>
   <!-- Opciones comunes de todos los proyectos de Actualizador. -->
   <PropertyGroup>
-    <Version>2.0.40</Version>
+    <Version>2.0.41</Version>
     <Company>Actualizador</Company>
     <Product>Actualizador</Product>
     <Copyright>Actualizador</Copyright>

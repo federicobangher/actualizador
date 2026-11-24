@@ -264,7 +264,9 @@ namespace Actualizador.App
                 try
                 {
                     SafePaths.EnsureDataDirectory(AppInfo.DataDirectory);
-                    using (System.Diagnostics.Process.Start("explorer.exe", "\"" + AppInfo.DataDirectory + "\"")) { }
+                    // 2.0.41 (relevamiento): antes «explorer.exe» por nombre suelto desde el proceso elevado: se busca primero en la carpeta del
+                    // programa (en la portable la puede escribir un usuario común) y el Explorador quedaba como administrador.
+                    ProcessRunner.OpenForUser(AppInfo.DataDirectory);
                 }
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning); }
             }));

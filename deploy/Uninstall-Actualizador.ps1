@@ -43,7 +43,10 @@ $OtrasClaves = @('HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Un
 $Datos = Join-Path $env:ProgramData 'Actualizador'
 $Ejecutables = @('Actualizador.exe', 'Actualizador.Cli.exe', 'Actualizador.Aviso.exe')
 $Procesos = @('Actualizador', 'Actualizador.Cli', 'Actualizador.Aviso')
-$PowerShellExe = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+# 2.0.41 (relevamiento): la carpeta de sistema de Windows, no la variable SystemRoot (el usuario puede redefinirla y este
+# script corre como administrador).
+$Sistema = [Environment]::SystemDirectory
+$PowerShellExe = Join-Path $Sistema 'WindowsPowerShell\v1.0\powershell.exe'
 
 function Test-Administrador {
     $id = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -90,7 +93,7 @@ function Remove-Carpeta([string]$Carpeta) {
 function Register-BorradoAlReiniciar([string]$Carpeta) {
     $runOnce = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce'
     if (-not (Test-Path -LiteralPath $runOnce)) { New-Item -Path $runOnce -Force | Out-Null }
-    $cmd = (Join-Path $env:SystemRoot 'System32\cmd.exe') + ' /c rd /s /q "' + $Carpeta + '"'
+    $cmd = (Join-Path $Sistema 'cmd.exe') + ' /c rd /s /q "' + $Carpeta + '"'
     New-ItemProperty -LiteralPath $runOnce -Name 'Actualizador - terminar de desinstalar' -Value $cmd -PropertyType String -Force | Out-Null
 }
 
@@ -113,7 +116,7 @@ if (-not (Test-Administrador)) {
 }
 
 # Nada de esta carpeta queda en uso por la consola (si el script se abrió con la carpeta del programa como actual).
-try { Set-Location -LiteralPath $env:SystemRoot } catch { }
+try { Set-Location -LiteralPath $Sistema } catch { }
 
 if (-not (Test-Path -LiteralPath $Datos)) { try { New-Item -ItemType Directory -Path $Datos -Force | Out-Null } catch { } }
 $log = Join-Path $Datos 'desinstalacion.log'

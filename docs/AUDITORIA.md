@@ -1,3 +1,22 @@
+# Auditoría de Actualizador (2.0.41, 24/11/2026)
+
+| # | Síntoma / riesgo | Causa | Arreglo |
+|---|---|---|---|
+| 1 | Tor Browser 16.0.1 → 16.0.3: «Actualizar» abría www.torproject.org | Estaba en el catálogo sólo para comparar (portable, sin instalador registrado) | Se instala solo: instalador oficial con SHA-256 publicado y firma de The Tor Project, en silencio en la misma carpeta, conservando `Browser\TorBrowser\Data`; vuelve atrás si algo falla; como el usuario si la carpeta es suya |
+| 2 | Escalada local: la entrada de «Aplicaciones» podía apuntar a un powershell.exe del usuario | `Install-Actualizador.ps1` (elevado) armaba `UninstallString` con `$env:SystemRoot`, que el usuario puede redefinir en su cuenta | `[Environment]::SystemDirectory` |
+| 3 | Escalada local: el borrado al reiniciar (RunOnce, HKLM) y el PowerShell del desinstalador | Ídem, en `Uninstall-Actualizador.ps1` | Ídem |
+| 4 | «Desinstalar Actualizador» desde la ventana elevada ejecutaba `%SystemRoot%\…\powershell.exe` | `GetEnvironmentVariable("SystemRoot")` | `SafePaths.Windows` (derivado de la carpeta de sistema) |
+| 5 | Guiones de la actualización sola (corren elevados): `chcp` por nombre y `cd /d "%SystemRoot%\System32"` antes de abrir Actualizador | Actualizador quedaba abierto como administrador con la carpeta de trabajo que eligiera el usuario | `chcp.com` y System32 por ruta completa |
+| 6 | Opciones › «Abrir la carpeta»: `Process.Start("explorer.exe", …)` elevado | Nombre suelto (se busca primero en la carpeta del programa: en la portable la escribe un usuario común) y Explorador como administrador | `ProcessRunner.OpenForUser` (ruta completa, sin elevar) |
+
+Revisado sin cambios: descargas (HTTPS y dominio en cada redirección, respuestas de texto limitadas a 16 MB), descompresión de .zip
+(rutas que salen de la carpeta rechazadas; dependencias de winget con nombre plano y SHA-256), carpetas privadas de descarga (dueño
+Administradores, sin herencia, sin enlaces), lanzamientos de procesos (todos por ruta completa) y variables de entorno leídas.
+Pendiente conocido: `Instalar.cmd`, `Portable.cmd` y `Publicar.cmd` usan `%SystemRoot%` (los ejecuta a mano el técnico; cmd no tiene otra
+forma confiable de ubicar System32 y cada elevación pasa por el aviso de UAC).
+
+---
+
 # Auditoría de Actualizador (2.0.24, 21/11/2026)
 
 | # | Síntoma | Causa | Arreglo |

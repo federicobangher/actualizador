@@ -55,6 +55,8 @@ namespace Actualizador.Updates
         /// Con <see cref="VendorInstall.Starter4j"/>, la carpeta de ese archivo es la de trabajo del arranque.
         /// </summary>
         public string ProfileFile;
+        /// <summary>2.0.41: Tor Browser: su carpeta (la que tiene «Browser\firefox.exe»), o null si no se encontró.</summary>
+        public string TorRoot;
 
         public InstalledProgram Program { get { return Programs.Count > 0 ? Programs[0] : null; } }
         public string Product { get { return Check != null && !string.IsNullOrEmpty(Check.Product) ? Check.Product : Program != null ? Program.Name : ""; } }
@@ -106,7 +108,7 @@ namespace Actualizador.Updates
                 var matches = new List<InstalledProgram>();
                 // 2.0.8: lo que sólo se compara (no se instala desde acá) también se busca en las copias portables, encontradas por su
                 // acceso directo (Tor Browser se descomprime en el Escritorio, sin entrada en el registro).
-                foreach (var p in ctx.Programs) if (p != null && (!p.Unregistered || check.Install == VendorInstall.None || check.Install == VendorInstall.Starter4j) && check.Applies(p)) matches.Add(p);
+                foreach (var p in ctx.Programs) if (p != null && (!p.Unregistered || check.Install == VendorInstall.None || check.Install == VendorInstall.Starter4j || check.Install == VendorInstall.TorBrowser) && check.Applies(p)) matches.Add(p);
                 if (matches.Count == 0) continue;
                 var groups = new Dictionary<string, List<InstalledProgram>>(StringComparer.OrdinalIgnoreCase);
                 var order = new List<string>();
@@ -402,6 +404,7 @@ namespace Actualizador.Updates
                 string fileSource;
                 string real = ProductVersionFromFiles(check, CandidateFolders(p), ReadSmallFile, out fileSource);
                 if (real == null) { Log.Info(p.Name + ": no se encontró su archivo de versión (" + string.Join(", ", check.VersionFiles) + ")"); return null; }
+                if (check.Install == VendorInstall.TorBrowser) PrepareTor(ctx, plan, p, real);
                 if (real != installed) Log.Info(p.Name + ": versión del producto " + real + " (de " + fileSource + "; el registro o el ejecutable dicen " + installed + ")");
                 installed = real;
                 var direct = EvaluateFeed(ctx, check, plan, c, installed, allMatches, cache);
@@ -611,6 +614,19 @@ namespace Actualizador.Updates
                             plan.InstallerSha256 = PublishedHash(ctx, check, plan.InstallerUrl, latest, cache) ?? "";
                         break;
                     }
+                    case VendorFeed.TorBrowser:
+                    {
+                        // 2.0.41: el archivo de la plataforma instalada; si no responde, el anterior (obsoleto, pero lo sigue publicando).
+                        TorRelease rel = null;
+                        try { rel = TorBrowser.ParseFeed(Fetch(ctx, check, TorBrowser.FeedUrl(plan.Arch), "application/json", cache), plan.Arch); }
+                        catch (OperationCanceledByUserException) { throw; }
+                        catch (Exception ex) { Log.Info(check.Product + ": " + TorBrowser.FeedUrl(plan.Arch) + ": " + ex.Message + "; se usa " + check.Url); }
+                        if (rel == null) rel = TorBrowser.ParseFeed(Fetch(ctx, check, check.Url, "application/json", cache), plan.Arch);
+                        if (rel == null) break;
+                        latest = rel.Version;
+                        plan.InstallerUrl = rel.Binary;
+                        break;
+                    }
                     case VendorFeed.SparkleAppcast:
                     {
                         string feed = plan.Arch == "x86" ? check.Url.Replace("appcast.x64.xml", "appcast.xml") : check.Url;
@@ -723,7 +739,7 @@ namespace Actualizador.Updates
                     : "Coincide con la última versión estable publicada por el fabricante.";
                 return c;
             }
-            if (VersionUtil.Parse(installed) == null && (check.Install == VendorInstall.None || check.Install == VendorInstall.Starter4j))
+            if (VersionUtil.Parse(installed) == null && (check.Install == VendorInstall.None || check.Install == VendorInstall.Starter4j || check.Install == VendorInstall.TorBrowser))
             {
                 // 2.0.13: sin la versión instalada no se puede decir «desactualizado»: se muestra la publicada y cómo comparar.
                 c.Status = UpdateStatus.NoVerificable;
@@ -830,11 +846,56 @@ namespace Actualizador.Updates
                                    StarterFileName(check) + ". Cerrá " + check.Product + " antes de actualizar (Actualizador ofrece cerrarlo).";
                     }
                     break;
+                case VendorInstall.TorBrowser:
+                {
+                    bool asUser;
+                    string why = TorBrowser.CannotInstall(plan.TorRoot, ctx.IsAdmin, out asUser);
+                    if (why == null && plan.InstallerUrl == null) why = "no se encontró el instalador oficial para " + TorBrowser.Platform(plan.Arch);
+                    if (why != null)
+                    {
+                        c.Detail = lead + char.ToUpperInvariant(why[0]) + why.Substring(1) + ". " + check.HowToUpdate;
+                        if (why.IndexOf("administrador", StringComparison.Ordinal) < 0) c.InfoUrl = Fmt.WebUrl(check.InfoUrl);
+                        break;
+                    }
+                    c.Installable = true;
+                    c.Recommended = check.Recommended;
+                    c.Detail = lead + "Se actualiza desde acá: se baja «" + VendorProvider.FileNameFor(plan.InstallerUrl, "el instalador") + "» de " + new Uri(plan.InstallerUrl).Host +
+                               " y sólo se instala si su SHA-256 coincide con el que publica The Tor Project y está firmado por The Tor Project. Se instala en silencio en " +
+                               "la misma carpeta (" + plan.TorRoot + ") y se conservan los marcadores, la configuración y los puentes; si algo sale mal, queda la versión anterior. " +
+                               "Tor Browser tiene que estar cerrado (Actualizador ofrece cerrarlo)." + (asUser ? " Se ejecuta como tu usuario, sin privilegios de administrador." : "");
+                    break;
+                }
                 default:
                     c.Detail = lead + check.HowToUpdate;
                     break;
             }
             return c;
+        }
+
+        /// <summary>2.0.41: Tor Browser: su carpeta y su arquitectura (la de tbb_version.json o la de firefox.exe; si no, la del equipo).</summary>
+        void PrepareTor(UpdateContext ctx, VendorPlan plan, InstalledProgram p, string version)
+        {
+            plan.TorRoot = TorBrowser.RootOf(CandidateFolders(p), TorFileExists);
+            plan.Machine = false;
+            string arch = "";
+            if (plan.TorRoot != null)
+            {
+                plan.InstallDir = plan.TorRoot;
+                try { arch = TorBrowser.ArchFromVersionFile(ReadSmallFile(plan.TorRoot + @"\Browser\tbb_version.json")); } catch (Exception qx) { Log.Quiet("Arquitectura de Tor Browser", qx); }
+                if (arch.Length == 0 && TorFileExistsForTests == null) arch = BrowserCatalog.NormalizeArch(BrowserProvider.PeArch(plan.TorRoot + @"\Browser\firefox.exe"));
+            }
+            if (arch.Length == 0) arch = ArchitectureOf(ctx, p);
+            plan.Arch = arch;
+            Log.Info(p.Name + " " + version + ": carpeta " + (plan.TorRoot ?? "(no encontrada)") + ", " + TorBrowser.Platform(arch));
+        }
+
+        /// <summary>Sólo para las pruebas: si existe un archivo de Tor Browser.</summary>
+        internal static Func<string, bool> TorFileExistsForTests;
+
+        static bool TorFileExists(string path)
+        {
+            if (TorFileExistsForTests != null) return TorFileExistsForTests(path);
+            try { return File.Exists(path); } catch { return false; }
         }
 
         /// <summary>«starter.json»: el archivo del perfil donde el programa anota su versión.</summary>
