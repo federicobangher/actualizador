@@ -77,8 +77,10 @@ namespace Actualizador.Tests
                                               ProviderTag = w, Status = UpdateStatus.Disponible, Installable = true, Recommended = true, InstalledVersion = w.Version, AvailableVersion = w.Available };
                 MachineMemory.Put(MachineMemory.MachineFailureKey(w.Id, w.Available, w.SystemContext), error);
                 Eq(1, WingetProvider.ApplyMachineFailures(new List<UpdateCandidate> { c }, null), "se aplica");
-                Check(c.Status == UpdateStatus.NoVerificable && !c.Installable && !c.Recommended, "pasa a «sin verificar»: no cuenta como pendiente ni se marca");
-                Check(c.Detail.Contains("No se puede actualizar para todos los usuarios") && c.Detail.Contains("Vigía") && c.Detail.Contains("Microsoft Store"),
+                // 2.0.41 (el usuario): ya no pasa a «sin verificar»: sigue desactualizada, en «Disponibles», contada como pendiente, sin marcarse sola.
+                Check(c.Status == UpdateStatus.Disponible && c.Installable && !c.Recommended && c.ManualOnly, "sigue en «Disponibles», sin marcarse sola");
+                Check(UpdateGroups.IsPending(c) && UpdateGroups.ViewOf(c) == UpdateView.Pendientes && !UpdateGroups.MarkedByMarkAll(c), "cuenta como pendiente (igual que en Vigía) y «Marcar todo» no la marca");
+                Check(c.Detail.Contains("Sigue desactualizada") && c.Detail.Contains("Vigía") && c.Detail.Contains("Microsoft Store"),
                       "explica por qué, por qué Vigía la sigue listando y qué pasa con la de cada usuario: " + c.Detail);
             }
             finally { MachineMemory.StoreForTests = null; }

@@ -11,7 +11,9 @@ namespace Actualizador.Tests
     {
         static UpdateCandidate Fila176(string name, UpdateKind kind, UpdateStatus st, bool installable, bool recommended, string provider)
         {
-            return new UpdateCandidate { Name = name, Kind = kind, Status = st, Installable = installable, Recommended = recommended, ProviderName = provider, InstalledVersion = "1.0", AvailableVersion = "2.0" };
+            return new UpdateCandidate { Name = name, Kind = kind, Status = st, Installable = installable, Recommended = recommended, ProviderName = provider, InstalledVersion = "1.0",
+                                         // 2.0.41: una fila al día o sin verificar no dice una versión más nueva (si la dijera, está desactualizada: KnownOutdated)
+                                         AvailableVersion = st == UpdateStatus.AlDia ? "1.0" : st == UpdateStatus.NoVerificable ? "" : "2.0" };
         }
 
         static void TestUnSoloNumero176()

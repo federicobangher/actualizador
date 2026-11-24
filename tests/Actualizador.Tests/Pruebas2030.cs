@@ -31,7 +31,8 @@ namespace Actualizador.Tests
                 Check(servicioFila.Status == UpdateStatus.Disponible && servicioFila.Recommended, "marcada, para intentarla una vez por la vía de Vigía");
                 var respaldo = fila(false);
                 Eq(1, WingetProvider.ApplyMachineFailures(new List<UpdateCandidate> { respaldo }, null), "por «--scope machine» ya se sabe que no");
-                Check(respaldo.Status == UpdateStatus.NoVerificable, "esa vía: sin verificar");
+                // 2.0.41: ya no pasa a «sin verificar» (seguía desactualizada): queda en «Disponibles», sin marcarse sola.
+                Check(respaldo.Status == UpdateStatus.Disponible && respaldo.ManualOnly && !respaldo.Recommended && UpdateGroups.IsPending(respaldo), "esa vía: sigue pendiente, sin marcarse sola");
 
                 // Su explicación no la reemplaza la genérica («No figura en winget…»).
                 string antes = respaldo.Detail;

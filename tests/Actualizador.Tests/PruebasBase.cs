@@ -368,6 +368,9 @@ namespace Actualizador.Tests
             Run("Tor Browser abierto: sólo se cierra el de su carpeta", TestTorAbierto2041);
             Run("relevamiento: nada elevado toma rutas de %SystemRoot% ni nombres sueltos", TestRelevamientoRutas2041);
             Run("versión 2.0.41", TestVersion2041);
+            // --- 2.0.42 (Pruebas2042.cs)
+            Run("lo que falla no pasa a «Al día» (Outlook para todos los usuarios, la captura de las 18:21)", TestFallaNoPasaAAlDia2042);
+            Run("versión 2.0.42", TestVersion2042);
             Console.WriteLine();
             Console.WriteLine("Resultado: " + passed + " correctas, " + failed + " fallidas.");
             return failed == 0 ? 0 : 1;

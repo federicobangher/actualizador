@@ -137,14 +137,15 @@ namespace Actualizador.Updates
                 if (!MachineMemory.TryGet(memory, MachineMemory.MachineFailureKey(w.Id, c.AvailableVersion, w.SystemContext), out date, out why)) continue;
                 if (IsStructuralFailure(why))
                 {
-                    // 2.0.29: no hay con qué actualizarla para todos los usuarios (ni winget ni un paquete del manifiesto): reintentar da el
-                    // mismo error siempre. Queda en «Al día y sin verificar», con el motivo, y no cuenta como pendiente.
-                    c.Status = UpdateStatus.NoVerificable;
-                    c.Installable = false;
+                    // 2.0.29 la pasaba a «Al día y sin verificar» y no la contaba como pendiente. 2.0.41 (usuario, 24/11/2026: «los programas
+                    // que dan error, después vuelvo a buscar y aparecen donde dice todo al día por más que no esté actualizado; en Vigía sigue
+                    // figurando»): una versión vieja NUNCA va a «Al día». Sigue en «Disponibles», cuenta como pendiente (igual que en Vigía) y
+                    // dice por qué no se pudo; no se marca sola (daría el mismo error), pero se puede marcar a mano para reintentar.
                     c.Recommended = false;
-                    c.Detail = "No se puede actualizar para todos los usuarios: " + why + " (comprobado el " + MachineMemory.ShowDate(date) + "). " +
-                               "Es la copia que reciben las cuentas nuevas; el agente de Vigía la sigue listando porque su «winget upgrade --all» tampoco puede " +
-                               "actualizarla. " + ForEachAccountText(w);
+                    c.ManualOnly = true;
+                    c.Detail = "Sigue desactualizada: el " + MachineMemory.ShowDate(date) + " no se pudo actualizar para todos los usuarios porque " + why +
+                               ". Es la copia que reciben las cuentas nuevas; por eso el agente de Vigía también la lista. No se marca sola ni con «Marcar todo» " +
+                               "(daría el mismo error); se puede marcar a mano para reintentar cuando haya un paquete nuevo. " + ForEachAccountText(w) + " " + (c.Detail ?? "");
                     n++;
                     continue;
                 }
@@ -328,6 +329,22 @@ namespace Actualizador.Updates
             ProcResult p = ProvisionDirect(ctx, c, w, out why);
             if (p == null)
             {
+                // 2.0.41: sin paquete ni instalador en el manifiesto (Outlook, Office Hub…): si alguna cuenta del equipo ya tiene esa versión
+                // (la Store la actualiza en cada cuenta), Windows la aprovisiona para todos a partir de esa copia
+                // (PackageManager.ProvisionPackageForAllUsersAsync). Sin bajar nada: es el paquete firmado por Microsoft que ya está instalado.
+                string whyCopy;
+                InstallerSupport.Progress(c, changed, "Aprovisionando para todos la versión que ya tiene una cuenta del equipo…");
+                ProcResult fromInstalled = ProvisionFromInstalled(ctx, c, w, out whyCopy);
+                if (fromInstalled != null && fromInstalled.Started && !fromInstalled.TimedOut && WingetSetup.ScriptSucceeded(fromInstalled.Out, out whyCopy))
+                {
+                    now = w.SystemContext ? SystemVersionsNow(ctx, w.Id) : MachineVersionsNow(w.Id);
+                    c.Status = UpdateStatus.Instalada;
+                    c.InstalledVersion = c.AvailableVersion;
+                    c.Result = "Actualizada para todos los usuarios (Windows aprovisionó la " + c.AvailableVersion + " que ya tenía instalada una cuenta del equipo)" +
+                               (now != null && !MachineReached(now, c.AvailableVersion) ? ". winget todavía lista la " + Fmt.JoinY(now) + ": se reemplaza cuando cada usuario inicia sesión" : "");
+                    return;
+                }
+                if (!string.IsNullOrEmpty(whyCopy)) why += "; " + whyCopy;
                 InstallerSupport.Fail(c, "No se pudo actualizar para todos los usuarios: " + wingetWhy + "; y " + why);
                 MachineMemory.Put(MachineMemory.MachineFailureKey(w.Id, c.AvailableVersion, w.SystemContext), wingetWhy + "; " + why);
                 return;
@@ -346,6 +363,71 @@ namespace Actualizador.Updates
             c.Result = ((p.Out ?? "").Contains("instalador oficial") ? "Actualizada para todo el equipo (instalador oficial, SHA-256 verificado)"
                                                                      : "Actualizada para todos los usuarios (paquete oficial aprovisionado, SHA-256 verificado)") +
                        (now != null && !MachineReached(now, c.AvailableVersion) ? ". winget todavía lista la " + Fmt.JoinY(now) + (w.SystemContext ? ": es una copia vieja que convive con la nueva y Windows quita cuando ninguna app la usa" : ": se reemplaza cuando cada usuario inicia sesión") : "");
+        }
+
+        /// <summary>Sólo para las pruebas: reemplaza el aprovisionamiento desde la copia instalada (guion → resultado).</summary>
+        internal static Func<string, ProcResult> ProvisionInstalledForTests;
+
+        /// <summary>
+        /// 2.0.41: los nombres de paquete (Get-AppxPackage -Name) que puede tener esta fila: el que muestra winget como servicio
+        /// («Microsoft.MicrosoftOfficeHub», «Microsoft.OutlookForWindows») y el identificador. Sólo letras, números, puntos y guiones.
+        /// </summary>
+        public static List<string> PackageNamesOf(WingetRow w)
+        {
+            var list = new List<string>();
+            if (w == null) return list;
+            foreach (string s in new[] { (w.Name ?? "").Trim().TrimEnd('…'), (w.Id ?? "").Trim() })
+                if (System.Text.RegularExpressions.Regex.IsMatch(s, @"^[A-Za-z0-9][A-Za-z0-9.\-]{2,63}$") && s.IndexOf('.') > 0 &&
+                    !list.Exists(delegate(string x) { return x.Equals(s, StringComparison.OrdinalIgnoreCase); }))
+                    list.Add(s);
+            return list;
+        }
+
+        /// <summary>
+        /// 2.0.41: el guion que aprovisiona para todos los usuarios la versión <paramref name="offered"/> (o más nueva) que ya tiene
+        /// instalada alguna cuenta del equipo. «PROV-OK» si quedó; «PROV-ERR: …» si ninguna cuenta la tiene o Windows no pudo. Público para las pruebas.
+        /// </summary>
+        public static string ProvisionFromInstalledScript(List<string> names, string offered)
+        {
+            if (names == null || names.Count == 0) throw new ArgumentException("sin nombre de paquete");
+            foreach (string n in names)
+                if (!System.Text.RegularExpressions.Regex.IsMatch(n ?? "", @"^[A-Za-z0-9][A-Za-z0-9.\-]{2,63}$")) throw new ArgumentException("nombre de paquete no válido: " + n);
+            if (!System.Text.RegularExpressions.Regex.IsMatch(offered ?? "", @"^\d{1,9}(\.\d{1,9}){1,3}$")) throw new ArgumentException("versión no válida: " + offered);
+            var sb = new StringBuilder();
+            sb.Append("$ErrorActionPreference='Stop';try{$want=[version]").Append(WingetSetup.PsQuote(offered)).Append(";$p=$null;");
+            sb.Append("foreach($n in @(");
+            for (int i = 0; i < names.Count; i++) sb.Append(i > 0 ? "," : "").Append(WingetSetup.PsQuote(names[i]));
+            sb.Append(")){if(-not $p){$p=Get-AppxPackage -AllUsers -Name $n -ErrorAction SilentlyContinue|Where-Object{-not $_.IsFramework -and [version]$_.Version -ge $want}|");
+            sb.Append("Sort-Object {[version]$_.Version} -Descending|Select-Object -First 1}};");
+            sb.Append("if(-not $p){'PROV-ERR: ninguna cuenta del equipo tiene instalada la '+$want+' para aprovisionarla';return};");
+            sb.Append("Add-Type -AssemblyName System.Runtime.WindowsRuntime;");
+            sb.Append("$null=[Windows.Management.Deployment.PackageManager,Windows.Management.Deployment,ContentType=WindowsRuntime];");
+            sb.Append("$pm=New-Object Windows.Management.Deployment.PackageManager;");
+            sb.Append("$op=$pm.ProvisionPackageForAllUsersAsync($p.PackageFamilyName);");
+            sb.Append("$m=[System.WindowsRuntimeSystemExtensions].GetMethods()|Where-Object{$_.Name -eq 'AsTask' -and $_.IsGenericMethod -and $_.GetParameters().Count -eq 1 -and ");
+            sb.Append("$_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperationWithProgress`2'}|Select-Object -First 1;");
+            sb.Append("$t=$m.MakeGenericMethod([Windows.Management.Deployment.DeploymentResult],[Windows.Management.Deployment.DeploymentProgress]).Invoke($null,@($op));");
+            sb.Append("if(-not $t.Wait(600000)){'PROV-ERR: Windows no terminó de aprovisionarla a tiempo';return};");
+            sb.Append("$r=$t.Result;if($r.ExtendedErrorCode -and $r.ExtendedErrorCode.HResult -ne 0){'PROV-ERR: '+$r.ErrorText}else{'PROV-OK '+$p.Version}");
+            sb.Append("}catch{'PROV-ERR: '+$_.Exception.Message}");
+            return sb.ToString();
+        }
+
+        /// <summary>2.0.41: aprovisiona desde la copia ya instalada en alguna cuenta (ver <see cref="ProvisionFromInstalledScript"/>). null si no aplica.</summary>
+        ProcResult ProvisionFromInstalled(UpdateContext ctx, UpdateCandidate c, WingetRow w, out string why)
+        {
+            why = null;
+            var names = PackageNamesOf(w);
+            if (names.Count == 0) { why = "no tiene un nombre de paquete de Windows con el cual buscarla en las cuentas"; return null; }
+            string offered = (c.AvailableVersion ?? "").Trim();
+            string script;
+            try { script = ProvisionFromInstalledScript(names, offered); }
+            catch (ArgumentException ex) { why = "no se puede aprovisionar desde una cuenta (" + ex.Message + ")"; return null; }
+            if (ProvisionInstalledForTests != null) return ProvisionInstalledForTests(script);
+            ctx.Report(c.Name + ": aprovisionando para todos los usuarios la " + offered + " que ya tiene una cuenta del equipo…");
+            var r = ProcessRunner.PowerShell(script, 12 * 60 * 1000);
+            Log.Info(c.Name + ": aprovisionamiento desde la copia instalada: " + r.Describe() + " — " + Fmt.Truncate((r.Out ?? "").Replace("\r", " ").Replace("\n", " | "), 500));
+            return r;
         }
 
         static string ProvisionError(string output)

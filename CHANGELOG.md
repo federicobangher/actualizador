@@ -1,5 +1,24 @@
 # Cambios
 
+## 2.0.42
+
+Capturas del usuario (24/11/2026): a las 18:14 «Microsoft.OutlookForWindows (para todos los usuarios) 1.2026.922.300 → 1.2026.1026.100: Falló
+la instalación»; a las 18:21, otra búsqueda: «Disponibles (0)» y Outlook en «Al día y sin verificar», mientras Vigía la seguía listando.
+«Los programas que dan error, después vuelvo a buscar y aparecen donde dice todo al día por más que no esté actualizado».
+
+- **Lo que no se pudo actualizar ya no pasa a «Al día».** Desde la 2.0.29, una app «para todos los usuarios» sin paquete con el cual
+  actualizarse se mandaba a propósito a «Al día y sin verificar» y no contaba como pendiente. Ahora sigue en «Disponibles», contada
+  como pendiente (igual que en Vigía), con el motivo («Sigue desactualizada: …»); no se marca sola ni con «Marcar todo» (daría el mismo
+  error), pero se puede marcar a mano para reintentar.
+- **Red de seguridad general:** cualquier fila que diga una versión disponible más nueva que la instalada (las dos comparables) está
+  desactualizada, venga de donde venga su estado («Al día», «No verificable» o «Error»): va a «Disponibles» y cuenta como pendiente.
+  Lo que el usuario ignoró a propósito no cambia.
+- **Outlook, Office Hub y otras apps de la Store «para todos los usuarios» ahora se pueden actualizar** aunque winget no pueda y su
+  manifiesto no publique un paquete: si alguna cuenta del equipo ya tiene esa versión (la Store la actualiza en cada cuenta), Windows la
+  aprovisiona para todos a partir de esa copia (PackageManager.ProvisionPackageForAllUsersAsync). No se baja nada: es el paquete firmado
+  por Microsoft que ya está instalado. Si ninguna cuenta la tiene todavía, la fila lo dice.
+- Pruebas nuevas (Pruebas2042.cs).
+
 ## 2.0.41
 
 Captura del usuario (24/11/2026): Tor Browser 16.0.1 → 16.0.3 «Pendiente: Se abrió su página (www.torproject.org)»; «ese navegador no

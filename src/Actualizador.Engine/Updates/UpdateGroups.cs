@@ -26,6 +26,8 @@ namespace Actualizador.Updates
         public static UpdateGroup Of(UpdateCandidate u)
         {
             if (u == null) return UpdateGroup.SinVerificar;
+            // 2.0.41: red de seguridad: lo que se sabe desactualizado nunca va a «Al día y sin verificar» (ver KnownOutdated).
+            if (KnownOutdated(u)) return UpdateGroup.Opcional;
             switch (u.Status)
             {
                 case UpdateStatus.AlDia: return UpdateGroup.AlDia;
@@ -38,11 +40,28 @@ namespace Actualizador.Updates
             }
         }
 
+        /// <summary>
+        /// 2.0.41 (usuario, 24/11/2026: «los programas que dan error, después vuelvo a buscar y aparecen donde dice todo al día por más que
+        /// no esté actualizado; en Vigía sigue figurando»): una fila que quedó «Al día», «No verificable» o «Error» pero dice una versión
+        /// disponible MÁS NUEVA que la instalada (las dos se pueden comparar) está desactualizada, venga de donde venga ese estado: va a
+        /// «Disponibles» (sin marcarse sola) y cuenta como pendiente. Lo ignorado a propósito por el usuario no cambia.
+        /// </summary>
+        public static bool KnownOutdated(UpdateCandidate u)
+        {
+            if (u == null || u.IgnoredBy != null) return false;
+            if (u.Status != UpdateStatus.AlDia && u.Status != UpdateStatus.NoVerificable && u.Status != UpdateStatus.Error) return false;
+            string inst = (u.InstalledVersion ?? "").Trim(), avail = (u.AvailableVersion ?? "").Trim();
+            if (inst.Length == 0 || avail.Length == 0 || WingetTable.IsTruncated(avail)) return false;
+            if (VersionUtil.Parse(inst) == null || VersionUtil.Parse(avail) == null) return false;
+            return VersionUtil.IsNewer(avail, inst);
+        }
+
         /// <summary>¿Falta hacer algo con esta fila? (lo actualizado en esta sesión ya no cuenta; lo que se está instalando, sí).</summary>
         public static bool IsPending(UpdateCandidate u)
         {
             if (u == null) return false;
             if (u.Status == UpdateStatus.Instalando) return true;   // durante la instalación la tarjeta decía «0» y el árbol «al día»
+            if (KnownOutdated(u)) return true;                       // 2.0.41: desactualizada aunque su estado diga otra cosa
             if (Of(u) == UpdateGroup.ParaActualizar) return UpdateManager.CanInstall(u);
             return u.Status == UpdateStatus.Disponible || u.Status == UpdateStatus.Pendiente || u.Status == UpdateStatus.Fallida;
         }
