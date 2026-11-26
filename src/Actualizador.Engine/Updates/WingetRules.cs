@@ -296,6 +296,17 @@ namespace Actualizador.Updates
             }
         }
 
+        /// <summary>
+        /// 2.0.44: ¿el manifiesto no da ninguna forma de instalarlo en silencio? (ni Silent, ni SilentWithProgress, ni los
+        /// interruptores de su tecnología, ni InstallModes «silent»). Con su ventana (modo interactivo) sí se puede.
+        /// </summary>
+        public static bool HasNoSilentMode(WingetInstaller inst)
+        {
+            if (inst == null) return false;
+            return inst.Switch("Silent") == null && inst.Switch("SilentWithProgress") == null &&
+                   DefaultSwitch(inst.EffectiveType, true) == null && !inst.InstallModes.Contains("silent");
+        }
+
         static readonly Regex SafeSwitches = new Regex(@"^[\x20-\x7E]{0,400}$", RegexOptions.Compiled);
 
         /// <summary>

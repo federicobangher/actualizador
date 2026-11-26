@@ -35,7 +35,8 @@ if /i "%~1"=="/quitar" (
     goto :fin
 )
 
-rem Codigo fuente: se publica primero (necesita el SDK de .NET 8; lo ofrece instalar). Si ya estaba publicado,
+rem Codigo fuente: se publica primero con el SDK de .NET 8. Sin el SDK (2.0.44) se baja esa misma version ya publicada
+rem por GitHub y se verifica con su SHA-256; si no se puede, ofrece instalar el SDK. Si ya estaba publicado,
 rem Publish.ps1 -SiHaceFalta solo vuelve a compilar cuando lo publicado es de otra version o anterior al codigo:
 rem asi nunca se instala una publicacion vieja que quedo en la carpeta.
 rem Las pruebas son para quien desarrolla (build\Build.ps1); al instalar no se corren.

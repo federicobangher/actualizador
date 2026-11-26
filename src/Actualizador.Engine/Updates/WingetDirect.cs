@@ -17,6 +17,11 @@ namespace Actualizador.Updates
         public bool Handled;
         /// <summary>Si no se pudo intentar, por qué (se agrega al error de winget).</summary>
         public string NotApplicable;
+        /// <summary>
+        /// 2.0.44: no se intentó sólo porque el manifiesto no dice cómo instalarlo en silencio (Epic Online Services 5.8.0: un ZIP
+        /// con un .exe adentro y ningún interruptor). Con la ventana de su instalador sí se puede: quien llama decide si se abre.
+        /// </summary>
+        public bool NeedsWindow;
     }
 
     /// <summary>
@@ -120,7 +125,12 @@ namespace Actualizador.Updates
                 return a;
             }
             bool msiexec;
-            if (WingetRules.BuildArguments(inst, "x", interactive, null, out msiexec, out why) == null) { a.NotApplicable = why; return a; }
+            if (WingetRules.BuildArguments(inst, "x", interactive, null, out msiexec, out why) == null)
+            {
+                a.NotApplicable = why;
+                a.NeedsWindow = !interactive && WingetRules.HasNoSilentMode(inst);
+                return a;
+            }
 
             // Desde acá, esta vía se hace cargo del resultado.
             a.Handled = true;
@@ -385,6 +395,16 @@ namespace Actualizador.Updates
         public static DirectAttempt TryReinstall(UpdateContext ctx, UpdateCandidate c, WingetRow w, bool interactive,
                                                  Action<UpdateCandidate> changed, Func<ProcResult> wingetInstall)
         {
+            return TryReinstall(ctx, c, w, interactive, changed, wingetInstall, false);
+        }
+
+        /// <param name="quietUninstall">
+        /// 2.0.44: la ventana es sólo para el instalador nuevo (no tiene modo silencioso): la versión anterior se sigue desinstalando en
+        /// silencio, como siempre, y con el programa abierto no se toca nada.
+        /// </param>
+        public static DirectAttempt TryReinstall(UpdateContext ctx, UpdateCandidate c, WingetRow w, bool interactive,
+                                                 Action<UpdateCandidate> changed, Func<ProcResult> wingetInstall, bool quietUninstall)
+        {
             var a = new DirectAttempt();
             if (!string.Equals(w.Source, "winget", StringComparison.OrdinalIgnoreCase))
             {
@@ -398,7 +418,9 @@ namespace Actualizador.Updates
             if (ctx.IsAdmin && !machine) { a.NotApplicable = "está instalado para un usuario: desinstalalo desde su sesión y volvé a instalarlo"; return a; }
             if (!ctx.IsAdmin && machine) { a.NotApplicable = "para desinstalar la versión anterior hay que ejecutar Actualizador como administrador"; return a; }
             string why;
-            var un = ProgramRules.PlanUninstall(prog, interactive, out why);
+            bool uninstallWindow = interactive && !quietUninstall;
+            var un = ProgramRules.PlanUninstall(prog, uninstallWindow, out why);
+            if (un == null && quietUninstall && interactive) { uninstallWindow = true; un = ProgramRules.PlanUninstall(prog, true, out why); }
             if (un == null) { a.NotApplicable = why; return a; }
             string uninstallExe = un.UsesMsiexec ? Path.Combine(SafePaths.System32, "msiexec.exe") : un.Exe;
             if (!un.UsesMsiexec)
@@ -440,7 +462,12 @@ namespace Actualizador.Updates
                 return a;
             }
             bool msiexec;
-            if (WingetRules.BuildArguments(inst, "x", interactive, null, out msiexec, out why) == null) { a.NotApplicable = why; return a; }
+            if (WingetRules.BuildArguments(inst, "x", interactive, null, out msiexec, out why) == null)
+            {
+                a.NotApplicable = why;
+                a.NeedsWindow = !interactive && WingetRules.HasNoSilentMode(inst);
+                return a;
+            }
 
             // Desde acá, esta vía se hace cargo del resultado.
             a.Handled = true;
@@ -486,7 +513,7 @@ namespace Actualizador.Updates
 
                     string app = AppFolder(prog);
                     string running = RunningFrom(app);
-                    if (running != null && !interactive)
+                    if (running != null && !uninstallWindow)
                     {
                         InstallerSupport.Fail(c, running + " está abierto: cerralo y reintentá (no se desinstaló nada)");
                         return a;

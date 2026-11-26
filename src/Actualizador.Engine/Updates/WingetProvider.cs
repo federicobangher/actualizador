@@ -403,6 +403,7 @@ namespace Actualizador.Updates
                 }
                 else if (machineEarly != null) Log.Warn("winget upgrade --scope machine: " + machineEarly.Describe());
             }
+            MarkOlderCopies(output);
             var vistos = new List<WingetRow>(upgrades);
             vistos.AddRange(installed);
             int extra = AddMissingPrograms(programs, vistos, output);
@@ -580,6 +581,40 @@ namespace Actualizador.Updates
             c.Status = UpdateStatus.AlDia;
             c.Detail = "Coincide con la última versión publicada en " + w.Source + ".";
             return c;
+        }
+
+        /// <summary>
+        /// 2.0.44 (relevamiento del diagnóstico del 26/11/2026): «Kingston SSD Manager version 1.1.2.6» y «Kingston SSD Manager x64 1.5.6.5»,
+        /// el mismo paquete de winget (Kingston.SSDManager), las dos «Al día» con «Coincide con la última versión publicada en winget». La
+        /// 1.1.2.6 no es la última: es una instalación anterior que quedó al lado de la nueva (otro instalador u otra arquitectura) y que
+        /// winget no ofrece actualizar. Sigue en «Al día» (winget y Vigía no la ofrecen), pero la fila dice la verdad: con qué copia convive.
+        /// </summary>
+        public static void MarkOlderCopies(List<UpdateCandidate> rows)
+        {
+            if (rows == null) return;
+            var newest = new Dictionary<string, UpdateCandidate>(StringComparer.OrdinalIgnoreCase);
+            foreach (var c in rows)
+            {
+                var w = c.ProviderTag as WingetRow;
+                if (w == null || c.ProviderName != ProviderId || c.Status != UpdateStatus.AlDia || w.Source.Length == 0 || w.IdTruncated) continue;
+                if (VersionUtil.Parse(c.InstalledVersion) == null) continue;
+                string key = w.Source + "|" + w.Id;
+                UpdateCandidate best;
+                if (!newest.TryGetValue(key, out best) || VersionUtil.IsNewer(c.InstalledVersion, best.InstalledVersion)) newest[key] = c;
+            }
+            foreach (var c in rows)
+            {
+                var w = c.ProviderTag as WingetRow;
+                if (w == null || c.ProviderName != ProviderId || c.Status != UpdateStatus.AlDia || w.Source.Length == 0) continue;
+                UpdateCandidate best;
+                if (!newest.TryGetValue(w.Source + "|" + w.Id, out best) || ReferenceEquals(best, c)) continue;
+                if (VersionUtil.Parse(c.InstalledVersion) == null || !VersionUtil.IsNewer(best.InstalledVersion, c.InstalledVersion)) continue;
+                if (!(c.Detail ?? "").StartsWith("Coincide con la última versión publicada", StringComparison.Ordinal)) continue;
+                c.AvailableVersion = best.InstalledVersion;
+                c.Detail = "Convive con «" + best.Name + "» (" + best.InstalledVersion + "), del mismo paquete de winget (" + w.Id + ") y más nueva: esta entrada es de " +
+                           "una instalación anterior (otro instalador u otra arquitectura) y winget no la actualiza ni la ofrece. Si ya no la usás, desinstalala " +
+                           "desde Configuración › Aplicaciones.";
+            }
         }
 
         /// <summary>

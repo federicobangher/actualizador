@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
-  <assemblyIdentity version="2.0.43.0" name="Actualizador.Cli" type="win32"/>
+  <assemblyIdentity version="2.0.44.0" name="Actualizador.Cli" type="win32"/>
   <description>Actualizador - Consola</description>
 
   <!-- asInvoker: la consola usa los privilegios de quien la ejecuta (consola de administrador, SYSTEM desde un RMM o

@@ -120,19 +120,39 @@ function Write-DiagnosticoDotNet {
     }
 }
 
+# 2.0.44 (captura del usuario, 26/11/2026): en la ventana elevada de Instalar.cmd «winget» puede no estar en el PATH (es un alias de
+# la cuenta, en %LOCALAPPDATA%\Microsoft\WindowsApps) y entonces ni se ofrecía instalar el SDK. Se busca también ahí y en el paquete
+# de App Installer.
+function Find-Winget {
+    $c = Get-Command winget.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($c) { return $c.Source }
+    if ($env:LOCALAPPDATA) {
+        $alias = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\winget.exe'
+        if (Test-Path -LiteralPath $alias) { return $alias }
+    }
+    try {
+        $p = Get-AppxPackage -Name 'Microsoft.DesktopAppInstaller' -ErrorAction Stop | Sort-Object { [version]$_.Version } -Descending | Select-Object -First 1
+        if ($p -and $p.InstallLocation) {
+            $w = Join-Path $p.InstallLocation 'winget.exe'
+            if (Test-Path -LiteralPath $w) { return $w }
+        }
+    } catch { }
+    return $null
+}
+
 function Assert-DotNetSdk {
     if (Use-DotNetSdk8) { return }
     Write-Host 'Falta el SDK de .NET 8 (hace falta sólo en el equipo donde se compila).' -ForegroundColor Yellow
-    $winget = Get-Command winget -ErrorAction SilentlyContinue
+    $winget = Find-Winget
     if ($winget) {
         $r = Read-Host '¿Instalarlo ahora con winget (Microsoft.DotNet.SDK.8)? [s/N]'
         if ($r -match '^(s|si|sí|y|yes)$') {
-            & winget install --id Microsoft.DotNet.SDK.8 --exact --source winget --accept-package-agreements --accept-source-agreements
+            & $winget install --id Microsoft.DotNet.SDK.8 --exact --source winget --accept-package-agreements --accept-source-agreements
             $env:PATH = [Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('PATH', 'User')
             if (Use-DotNetSdk8) { return }
             # winget lo da por instalado («No hay versiones más recientes») pero no aparece: se reinstala encima (repara los archivos).
             Write-Host 'winget lo da por instalado pero el SDK no aparece: se reinstala para repararlo.' -ForegroundColor Yellow
-            & winget install --id Microsoft.DotNet.SDK.8 --exact --source winget --force --accept-package-agreements --accept-source-agreements
+            & $winget install --id Microsoft.DotNet.SDK.8 --exact --source winget --force --accept-package-agreements --accept-source-agreements
             $env:PATH = [Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('PATH', 'User')
             if (Use-DotNetSdk8) { return }
         }
@@ -197,6 +217,81 @@ function Get-MotivoParaPublicar([string]$Raiz, [string]$Salida, [string]$Version
         if ($a.LastWriteTimeUtc -gt $hecho) { return "el código cambió después de publicar ($($a.Name))" }
     }
     return $null
+}
+
+# 2.0.44 (captura del usuario, 26/11/2026): Instalar.cmd del código fuente, en un equipo sin el SDK de .NET 8, terminaba en «Instalá el SDK
+# de .NET 8 x64… y volvé a ejecutar». Desde la 2.0.36 GitHub compila y publica cada versión (con sus pruebas): sin SDK, se baja ESA MISMA
+# versión ya publicada y se instala esa. Sólo de github.com/<repo>/releases por HTTPS; el .zip tiene que coincidir con el SHA-256 publicado
+# a su lado, no puede traer rutas que salgan de su carpeta, el Actualizador.exe de adentro tiene que ser de esta versión y cada archivo
+# tiene que coincidir con su SHA256SUMS.txt (Install-Actualizador.ps1 lo vuelve a verificar antes de copiar). Devuelve $true si quedó en $Salida.
+function Get-EntregaPublicada([string]$Version, [string]$Salida, [string]$Repo = 'federicobangher/actualizador') {
+    $ErrorActionPreference = 'Stop'   # sólo dentro de la función: cualquier falla corta y se informa abajo
+    if ($Version -notmatch '^\d{1,4}(\.\d{1,6}){2,3}$') { return $false }
+    if ($Repo -notmatch '^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}$') { return $false }
+    Write-Paso "Sin SDK de .NET 8: se baja Actualizador $Version ya publicado en github.com/$Repo"
+    $nombre = "Actualizador-$Version.zip"
+    $base = "https://github.com/$Repo/releases/download/v$Version/"
+    $tmp = Join-Path ([IO.Path]::GetTempPath()) ('Actualizador-entrega-' + [Guid]::NewGuid().ToString('N'))
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+        New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+        $wc = New-Object Net.WebClient
+        $wc.Headers['User-Agent'] = "Actualizador-Instalar/$Version"
+        $texto = [string]$wc.DownloadString($base + "$nombre.sha256")
+        if ($texto -notmatch '^\s*([0-9a-fA-F]{64})\b') { throw "el $nombre.sha256 publicado no trae un SHA-256" }
+        $esperado = $Matches[1].ToLowerInvariant()
+        $zip = Join-Path $tmp $nombre
+        Write-Host "Descargando $nombre…"
+        $wc.DownloadFile($base + $nombre, $zip)
+        $real = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($real -ne $esperado) { throw "$nombre no coincide con el SHA-256 publicado (llegó $real)" }
+        Write-Host "SHA-256 verificado: $real"
+
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $z = [IO.Compression.ZipFile]::OpenRead($zip)
+        try {
+            foreach ($e in $z.Entries) {
+                $n = $e.FullName.Replace('/', '\')
+                if ($n -match '(^|\\)\.\.(\\|$)' -or $n.StartsWith('\') -or $n.Contains(':')) { throw "el .zip trae una ruta no válida: $($e.FullName)" }
+            }
+        } finally { $z.Dispose() }
+        $abierto = Join-Path $tmp 'entrega'
+        [IO.Compression.ZipFile]::ExtractToDirectory($zip, $abierto)
+
+        $pub = Join-Path $abierto 'Actualizador'
+        $exe = Join-Path $pub 'Actualizador.exe'
+        $sumas = Join-Path $pub 'SHA256SUMS.txt'
+        if (-not (Test-Path -LiteralPath $exe -PathType Leaf) -or -not (Test-Path -LiteralPath $sumas -PathType Leaf)) {
+            throw 'la entrega publicada no trae Actualizador\Actualizador.exe y su SHA256SUMS.txt'
+        }
+        $pv = (([string][Diagnostics.FileVersionInfo]::GetVersionInfo($exe).ProductVersion) -split '[+ ]')[0]
+        if ($pv -ne $Version) { throw "la entrega publicada es la versión «$pv», no la $Version" }
+        $n = 0
+        foreach ($linea in [IO.File]::ReadAllLines($sumas)) {
+            if ($linea -notmatch '^([0-9a-f]{64})  (.+)$') { continue }
+            $h = $Matches[1]; $rel = $Matches[2]
+            if ($rel -match '(^|\\)\.\.(\\|$)' -or [IO.Path]::IsPathRooted($rel)) { throw "ruta no válida en SHA256SUMS.txt: $rel" }
+            $f = Join-Path $pub $rel
+            if (-not (Test-Path -LiteralPath $f -PathType Leaf)) { throw "falta $rel (la entrega está incompleta)" }
+            if ((Get-FileHash -LiteralPath $f -Algorithm SHA256).Hash.ToLowerInvariant() -ne $h) { throw "$rel no coincide con su SHA-256" }
+            $n++
+        }
+        if ($n -eq 0) { throw 'SHA256SUMS.txt no lista ningún archivo' }
+
+        if (Test-Path -LiteralPath $Salida) { Remove-Item -LiteralPath $Salida -Recurse -Force }
+        $padre = Split-Path -Parent $Salida
+        if ($padre) { New-Item -ItemType Directory -Path $padre -Force | Out-Null }
+        Copy-Item -LiteralPath $pub -Destination $Salida -Recurse -Force
+        # Recién copiada: para Get-MotivoParaPublicar es una publicación de esta versión hecha ahora (si no, se bajaría cada vez).
+        (Get-Item -LiteralPath (Join-Path $Salida 'SHA256SUMS.txt')).LastWriteTimeUtc = [DateTime]::UtcNow
+        Write-Host "Actualizador $Version (compilado y probado por GitHub): $n archivos verificados, en $Salida." -ForegroundColor Green
+        return $true
+    } catch {
+        Write-Host "No se pudo usar la versión publicada en GitHub: $($_.Exception.Message)" -ForegroundColor Yellow
+        return $false
+    } finally {
+        if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue }
+    }
 }
 
 # 7z.exe de 7-Zip (para comprimir en .7z), o $null si no está instalado. Primero la ruta que 7-Zip deja en el registro.

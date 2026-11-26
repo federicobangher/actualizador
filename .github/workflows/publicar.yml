@@ -25,11 +25,28 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
       DOTNET_NOLOGO: '1'
     steps:
-      - uses: actions/checkout@v4
+      # 2.0.44 (auditoría): las acciones fijadas por su commit, no por la etiqueta «v4» (una etiqueta se puede mover y este trabajo
+      # tiene permiso para publicar versiones). Son los commits a los que apuntaba «v4» el 26/11/2026.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: '8.0.x'
+
+      # 2.0.44: los guiones los ejecuta el técnico con Windows PowerShell 5.1; un error de sintaxis aparece recién en su equipo.
+      - name: Revisar la sintaxis de los guiones (Windows PowerShell 5.1)
+        shell: powershell
+        run: |
+          $mal = 0
+          foreach ($f in @(Get-ChildItem -Path build, deploy -Filter *.ps1 -Recurse)) {
+            $tokens = $null; $errores = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$tokens, [ref]$errores)
+            foreach ($e in @($errores)) { Write-Host "::error file=$($f.FullName),line=$($e.Extent.StartLineNumber)::$($e.Message)"; $mal++ }
+          }
+          if ($mal -gt 0) { exit 1 }
+          Write-Host 'Sintaxis correcta.'
 
       - name: ¿Ya está publicada esta versión?
         id: version
@@ -43,6 +60,21 @@ jobs:
           if ($ya) { Write-Host "La versión v$v ya está publicada: no se hace nada." } else { Write-Host "Se publica la versión v$v." }
           "publicada=$($ya.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           exit 0
+
+      # 2.0.44: Instalar.cmd del código fuente, en un equipo sin el SDK de .NET 8, baja la versión ya publicada (Get-EntregaPublicada).
+      # Se prueba de verdad con la última publicada: descarga, SHA-256, contenido y SHA256SUMS.txt.
+      - name: Instalar.cmd sin SDK (bajar y verificar la última versión publicada)
+        if: steps.version.outputs.publicada != 'true'
+        shell: powershell
+        run: |
+          . .\build\Comun.ps1
+          $ErrorActionPreference = 'Continue'
+          $tag = [string](gh release view --repo $env:GITHUB_REPOSITORY --json tagName --jq .tagName 2>$null)
+          if (-not $tag) { Write-Host 'Todavía no hay versiones publicadas: no hay qué probar.'; exit 0 }
+          $salida = Join-Path $env:RUNNER_TEMP 'entrega-publicada\Actualizador'
+          if (-not (Get-EntregaPublicada -Version $tag.TrimStart('v') -Salida $salida -Repo $env:GITHUB_REPOSITORY)) { exit 1 }
+          if (-not (Test-Path -LiteralPath (Join-Path $salida 'Actualizador.exe'))) { exit 1 }
+          Write-Host "Correcto: $tag bajada y verificada."
 
       - name: Compilar, probar y publicar
         if: steps.version.outputs.publicada != 'true'

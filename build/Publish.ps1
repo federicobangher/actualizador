@@ -14,7 +14,8 @@
 
     -SiHaceFalta (lo usa Instalar.cmd): no vuelve a publicar si lo que ya está publicado es de esta misma versión y es
     posterior a todo el código. Si el código cambió o es de otra versión, publica de nuevo: antes, con una publicación
-    vieja en la carpeta, Instalar.cmd volvía a instalar esos archivos viejos sin avisar.
+    vieja en la carpeta, Instalar.cmd volvía a instalar esos archivos viejos sin avisar. Desde la 2.0.44, si el equipo no
+    tiene el SDK de .NET 8, baja esa misma versión ya publicada por GitHub (SHA-256 verificado) en vez de pedir el SDK.
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File build\Publish.ps1
@@ -46,6 +47,11 @@ if ($SiHaceFalta) {
         exit 0
     }
     Write-Host "Se publica de nuevo: $motivo." -ForegroundColor Yellow
+    # 2.0.44: sin el SDK no se puede compilar; Instalar.cmd usa la misma versión que GitHub ya compiló y publicó.
+    if (-not $CertificadoHuella -and -not $Pfx -and -not (Use-DotNetSdk8)) {
+        if (Get-EntregaPublicada -Version $version -Salida $Salida) { exit 0 }
+        Write-Host 'Queda compilarla en este equipo, con el SDK de .NET 8.' -ForegroundColor Yellow
+    }
 }
 Assert-SinSmartAppControl -HayFirma:([bool]($CertificadoHuella -or $Pfx))
 Assert-DotNetSdk

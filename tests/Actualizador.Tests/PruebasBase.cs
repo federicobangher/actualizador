@@ -374,6 +374,14 @@ namespace Actualizador.Tests
             // --- 2.0.43 (en Pruebas2042.cs)
             Run("Visual C++ 2012 que convive con la 11.0.61030 sigue «Al día» (la grabación de las 18:43)", TestRuntimeQueConviveSigueAlDia2043);
             Run("versión 2.0.43", TestVersion2043);
+            // --- 2.0.44 (Pruebas2044.cs)
+            Run("Epic Online Services: el manifiesto no trae modo silencioso (ZIP con un .exe)", TestSinModoSilencioso2044);
+            Run("Epic Online Services 5.4.0 → 5.8.0 se reinstala con la ventana de su instalador (el diagnóstico)", TestEosConSuVentana2044);
+            Run("con la ventana sólo para el instalador nuevo, la anterior se desinstala en silencio", TestDesinstalaEnSilencio2044);
+            Run("Instalar.cmd sin el SDK de .NET 8 usa la versión publicada por GitHub (la foto)", TestInstalarSinSdk2044);
+            Run("auditoría: el aprovisionamiento para todos sólo toma copias de la Store", TestAprovisionaSoloDeLaStore2044);
+            Run("relevamiento: una copia anterior del mismo paquete de winget dice con cuál convive (Kingston SSD Manager)", TestCopiaAnteriorDelMismoPaquete2044);
+            Run("versión 2.0.44", TestVersion2044);
             Console.WriteLine();
             Console.WriteLine("Resultado: " + passed + " correctas, " + failed + " fallidas.");
             return failed == 0 ? 0 : 1;

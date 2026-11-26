@@ -1,5 +1,34 @@
 # Cambios
 
+## 2.0.44
+
+Diagnóstico del usuario (26/11/2026, 20:10), con la 2.0.43: «Epic Online Services 5.4.0 → 5.8.0 · Falló la instalación: la versión nueva usa
+otro tipo de instalador… No se pudo reinstalar automáticamente: el manifiesto no indica cómo instalarlo en silencio». Y foto de `Instalar.cmd`
+del código fuente en otro equipo: «Falta el SDK de .NET 8… Instalá el SDK de .NET 8 x64… y volvé a ejecutar». Más relevamiento y auditoría.
+
+- **Epic Online Services se actualiza.** Su paquete nuevo en winget es un ZIP con un .exe adentro y ningún interruptor: en silencio no se
+  puede, y la reinstalación se cortaba ahí. Ahora, como con Npcap (2.0.40), si el instalador del manifiesto no tiene modo silencioso se
+  usa su ventana: se baja, se verifica igual (SHA-256 del catálogo, tipo de archivo, firma no revocada), la versión anterior se desinstala
+  en silencio como siempre (y con el programa abierto no se toca nada) y el instalador nuevo se abre para completarlo con unos clics. Vale
+  para cualquier programa en ese caso, no sólo Epic. Sin nadie frente a la pantalla (revisión programada) o si la política de la empresa no
+  permite instaladores con ventana, no se abre nada y la fila dice por qué.
+- **`Instalar.cmd` del código fuente ya no exige el SDK de .NET 8.** Desde la 2.0.36 GitHub compila, prueba y publica cada versión: en un
+  equipo sin el SDK se baja ESA MISMA versión ya publicada (github.com/federicobangher/actualizador, por HTTPS), se verifica con el SHA-256
+  publicado a su lado, se rechaza si trae rutas que salen de su carpeta, el Actualizador.exe de adentro tiene que ser de esa versión y cada
+  archivo tiene que coincidir con su SHA256SUMS.txt; después se instala como siempre. Si no se puede bajar, ofrece instalar el SDK como antes.
+- **winget fuera del PATH:** en la ventana elevada de `Instalar.cmd` «winget» puede no estar en el PATH (es un alias de la cuenta) y ni se
+  ofrecía instalar el SDK. Ahora se busca también en `%LOCALAPPDATA%\Microsoft\WindowsApps` y en el paquete de App Installer.
+- **Relevamiento — dos copias del mismo paquete de winget.** «Kingston SSD Manager version 1.1.2.6» y «Kingston SSD Manager x64 1.5.6.5»
+  (las dos Kingston.SSDManager) aparecían «Al día» con «Coincide con la última versión publicada en winget», y la 1.1.2.6 no es la última.
+  Sigue en «Al día» (ni winget ni Vigía la ofrecen), pero ahora dice con qué copia más nueva convive y que se puede desinstalar si no se usa.
+- **Auditoría — aprovisionamiento para todos los usuarios (2.0.42):** se tomaba cualquier copia instalada en una cuenta con ese nombre de
+  paquete. Una registrada en modo desarrollador, o firmada por quien la instaló, se habría aprovisionado para todas las cuentas desde el
+  Actualizador elevado. Ahora sólo una copia de la Store o de Windows (firma «Store» o «System», nunca en modo desarrollador).
+- **Auditoría — GitHub Actions:** las acciones (`checkout`, `setup-dotnet`) se fijan por commit y no por la etiqueta «v4», que se puede
+  mover (el trabajo tiene permiso para publicar versiones), y el token no queda guardado en la copia del repositorio. Antes de publicar se
+  revisa la sintaxis de todos los guiones con Windows PowerShell 5.1 y se prueba de verdad la descarga verificada de la última versión.
+- Pruebas nuevas (Pruebas2044.cs). Detalle en docs/AUDITORIA.md.
+
 ## 2.0.43
 
 Grabación del usuario (24/11/2026, 18:43), con la 2.0.42: «Hay 1 actualización disponible» y en «Disponibles» una sola fila, «Microsoft

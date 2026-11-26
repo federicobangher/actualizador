@@ -397,9 +397,12 @@ namespace Actualizador.Updates
             sb.Append("$ErrorActionPreference='Stop';try{$want=[version]").Append(WingetSetup.PsQuote(offered)).Append(";$p=$null;");
             sb.Append("foreach($n in @(");
             for (int i = 0; i < names.Count; i++) sb.Append(i > 0 ? "," : "").Append(WingetSetup.PsQuote(names[i]));
-            sb.Append(")){if(-not $p){$p=Get-AppxPackage -AllUsers -Name $n -ErrorAction SilentlyContinue|Where-Object{-not $_.IsFramework -and [version]$_.Version -ge $want}|");
+            // 2.0.44 (auditoría): sólo una copia que instaló la Store o Windows (firma «Store» o «System»), nunca una registrada en modo
+            // desarrollador ni firmada por el usuario: Actualizador corre como administrador y la aprovisiona para TODAS las cuentas.
+            sb.Append(")){if(-not $p){$p=Get-AppxPackage -AllUsers -Name $n -ErrorAction SilentlyContinue|Where-Object{-not $_.IsFramework -and -not $_.IsDevelopmentMode -and ");
+            sb.Append("(@('Store','System') -contains [string]$_.SignatureKind) -and [version]$_.Version -ge $want}|");
             sb.Append("Sort-Object {[version]$_.Version} -Descending|Select-Object -First 1}};");
-            sb.Append("if(-not $p){'PROV-ERR: ninguna cuenta del equipo tiene instalada la '+$want+' para aprovisionarla';return};");
+            sb.Append("if(-not $p){'PROV-ERR: ninguna cuenta del equipo tiene instalada la '+$want+' desde Microsoft Store para aprovisionarla';return};");
             sb.Append("Add-Type -AssemblyName System.Runtime.WindowsRuntime;");
             sb.Append("$null=[Windows.Management.Deployment.PackageManager,Windows.Management.Deployment,ContentType=WindowsRuntime];");
             sb.Append("$pm=New-Object Windows.Management.Deployment.PackageManager;");

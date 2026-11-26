@@ -1,3 +1,45 @@
+# Auditoría de Actualizador (2.0.44, 26/11/2026)
+
+Alcance: lo nuevo desde la auditoría de la 2.0.41 (aprovisionamiento para todos de la 2.0.42, red de seguridad de «Disponibles» de la
+2.0.42/2.0.43), lo que cambia en esta versión y la publicación automática en GitHub. Base: el diagnóstico del 26/11/2026 (registros del
+06/11 al 26/11).
+
+## Errores (relevamiento)
+
+| # | Síntoma | Causa | Arreglo |
+|---|---|---|---|
+| 1 | Epic Online Services 5.4.0 → 5.8.0: «Falló la instalación … el manifiesto no indica cómo instalarlo en silencio» | Paquete nuevo de otra tecnología (ZIP con un .exe, sin interruptores); la reinstalación verificada sólo sabía hacerlo en silencio | Si el instalador no tiene modo silencioso, la misma vía con su ventana (con alguien frente a la pantalla y si la política lo permite); la anterior se desinstala en silencio |
+| 2 | `Instalar.cmd` (código fuente) en un equipo sin SDK: «Instalá el SDK de .NET 8 x64 … y volvé a ejecutar» | Instalar desde el código siempre compilaba; además, «winget» no estaba en el PATH de la ventana elevada y ni se ofrecía instalar el SDK | Sin SDK se baja la misma versión ya publicada por GitHub, verificada; winget se busca también en el alias de la cuenta y en App Installer |
+| 3 | «Kingston SSD Manager version 1.1.2.6» «Al día — Coincide con la última versión publicada en winget» junto a la 1.5.6.5 del mismo paquete | `winget list` no da versión disponible para la copia anterior y se tomaba la instalada como «la última» | La fila dice con qué copia más nueva convive (sigue «Al día»: ni winget ni Vigía la ofrecen) |
+
+Visto en los registros y sin cambios: «COM … DISP_E_TYPEMISMATCH» (fabricante del equipo y Centro de seguridad) dejó de aparecer después
+del 21/11 (ya arreglado); «api.github.com respondió 403 rate limit exceeded» el 23/11 (muchas búsquedas seguidas): la versión nueva de
+Actualizador ya no usa la API (2.0.34) y el contraste con GitHub guarda lo consultado (1 a 13 consultas por búsqueda); el día del
+diagnóstico no hubo ninguno.
+
+## Seguridad
+
+| # | Riesgo | Causa | Arreglo |
+|---|---|---|---|
+| 1 | Escalada/movimiento lateral: el Actualizador elevado aprovisionaba para TODAS las cuentas una app que podía haber registrado un usuario | `Get-AppxPackage -AllUsers -Name <paquete>` sin mirar el origen: una copia en modo desarrollador o firmada por el usuario con ese nombre servía | Sólo `SignatureKind` «Store» o «System» y nunca `IsDevelopmentMode` |
+| 2 | Cadena de suministro: el trabajo que publica versiones usaba `actions/checkout@v4` y `actions/setup-dotnet@v4` | Una etiqueta se puede mover a otro código; el trabajo tiene `contents: write` | Fijadas por commit (los de «v4» al 26/11/2026); `persist-credentials: false` |
+| 3 | Un error de sintaxis en un guion de PowerShell 5.1 se descubría en el equipo del técnico | Ninguna revisión de los .ps1 antes de publicar | Paso que analiza todos los .ps1 con el analizador de Windows PowerShell 5.1 |
+
+Diseño revisado de lo nuevo:
+- **Descarga de la versión publicada (`Get-EntregaPublicada`, corre elevada):** sólo `https://github.com/<repo>/releases/download/`, versión y
+  repositorio validados con expresiones estrictas antes de armar la dirección; SHA-256 publicado; entradas del .zip revisadas antes de
+  descomprimir (`..`, rutas absolutas, `:`); versión del ejecutable; cada archivo contra `SHA256SUMS.txt` (y `Install-Actualizador.ps1`
+  lo repite antes de copiar); carpeta temporal con nombre aleatorio, borrada siempre. No se usa si se pidió firmar con un certificado.
+- **Instalador con ventana:** misma verificación que en silencio (SHA-256 del catálogo, tipo de archivo, firma no revocada); sólo con alguien
+  frente a la pantalla y con `permitirInstaladoresConVentana`; la desinstalación de la versión anterior sigue en silencio y con el programa
+  abierto no se toca nada.
+
+Pendiente conocido (sin cambios): el SHA-256 de cada entrega se publica en el mismo lugar que la entrega (GitHub). Protege de descargas
+dañadas o cortadas, no de alguien que controle la cuenta de GitHub; la defensa es firmar con un certificado de firma de código
+(`build\Sign.ps1`, `-CertificadoHuella`) y exigir la firma (`Instalar.cmd -ExigirFirma`). Lo mismo vale para la actualización sola.
+
+---
+
 # Auditoría de Actualizador (2.0.41, 24/11/2026)
 
 | # | Síntoma / riesgo | Causa | Arreglo |

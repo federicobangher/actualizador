@@ -253,9 +253,7 @@ namespace Actualizador.Updates
                     {
                         ctx.Report(c.Name + ": la versión nueva usa otro tipo de instalador; se reinstala (primero se descarga y verifica la nueva)…");
                         string installArgs = UpgradeArgs(w, "install") + (archArg != null ? " --architecture " + archArg : "");
-                        DirectAttempt d;
-                        try { d = WingetDirect.TryReinstall(ctx, c, w, Interactive, changed, delegate { return RunUpgrade(installArgs, last, guard); }); }
-                        catch (OperationCanceledByUserException) { d = new DirectAttempt(); d.NotApplicable = "cancelada"; }
+                        DirectAttempt d = TryDirect(ctx, c, changed, delegate { return WingetDirect.TryReinstall(ctx, c, w, Interactive, changed, delegate { return RunUpgrade(installArgs, last, guard); }, windowForInstallerOnly); });
                         if (d.Handled) { changed(c); continue; }
                         directNote = d.NotApplicable;
                         Log.Info(c.Name + ": reinstalación no disponible: " + directNote);
@@ -266,9 +264,9 @@ namespace Actualizador.Updates
                     if (r.Started && !r.TimedOut && !r.Aborted && !ctx.CancelRequested && WingetDirect.Applies(code))
                     {
                         ctx.Report(WingetDirect.Why(code, c.Name));
-                        DirectAttempt d;
-                        try { d = WingetDirect.TryInstall(ctx, c, w, r.Out + "\n" + r.Err, code, Interactive, changed); }
-                        catch (OperationCanceledByUserException) { d = new DirectAttempt(); d.NotApplicable = "cancelada"; }
+                        string output = r.Out + "\n" + r.Err;
+                        uint failed = code;
+                        DirectAttempt d = TryDirect(ctx, c, changed, delegate { return WingetDirect.TryInstall(ctx, c, w, output, failed, Interactive, changed); });
                         if (d.Handled) { changed(c); continue; }
                         directNote = d.NotApplicable;
                         Log.Info(c.Name + ": vía directa no disponible: " + directNote);
@@ -281,9 +279,9 @@ namespace Actualizador.Updates
                     if (Usable(r, ctx) && IsNotApplicable(code))
                     {
                         ctx.Report(c.Name + ": winget no tiene un instalador aplicable; se revisa su manifiesto oficial…");
-                        DirectAttempt d;
-                        try { d = WingetDirect.TryInstall(ctx, c, w, r.Out + "\n" + r.Err, code, Interactive, changed); }
-                        catch (OperationCanceledByUserException) { d = new DirectAttempt(); d.NotApplicable = "cancelada"; }
+                        string output = r.Out + "\n" + r.Err;
+                        uint failed = code;
+                        DirectAttempt d = TryDirect(ctx, c, changed, delegate { return WingetDirect.TryInstall(ctx, c, w, output, failed, Interactive, changed); });
                         if (d.Handled) { changed(c); continue; }
                         directNote = d.NotApplicable;
                         Log.Info(c.Name + ": sin instalador aplicable: " + directNote);
@@ -317,6 +315,45 @@ namespace Actualizador.Updates
                 }
             }
             finally { Interactive = interactiveAsked; }
+        }
+
+        /// <summary>
+        /// Una vía directa (reinstalación verificada o instalador del manifiesto). 2.0.44, diagnóstico del usuario (26/11/2026): Epic
+        /// Online Services 5.4.0 → 5.8.0 «Falló la instalación: … el manifiesto no indica cómo instalarlo en silencio». Su paquete nuevo
+        /// es un ZIP con un .exe adentro y ningún interruptor: en silencio no se puede, con su ventana sí. Como Npcap (2.0.40), si hay
+        /// alguien frente a la pantalla y la política lo permite, se repite la misma vía con la ventana del instalador (descarga,
+        /// SHA-256 y firma se verifican igual); si no, la fila dice por qué no se abrió.
+        /// </summary>
+        /// <summary>2.0.44: mientras <see cref="TryDirect"/> repite una vía con la ventana sólo por el instalador nuevo.</summary>
+        bool windowForInstallerOnly;
+
+        DirectAttempt TryDirect(UpdateContext ctx, UpdateCandidate c, Action<UpdateCandidate> changed, Func<DirectAttempt> attempt)
+        {
+            DirectAttempt d;
+            try { d = attempt(); }
+            catch (OperationCanceledByUserException) { d = new DirectAttempt(); d.NotApplicable = "cancelada"; }
+            if (d.Handled || !d.NeedsWindow || Interactive || ctx.CancelRequested) return d;
+            if (Unattended || !(UpdateManager.PolicyForTests ?? Policy.Current).AllowInteractiveInstallers)
+            {
+                d.NotApplicable = "su instalador no tiene modo silencioso y " +
+                                  (Unattended ? "sin nadie frente a la pantalla no se abre su ventana: actualizalo desde la ventana de Actualizador (se completa con unos clics)"
+                                              : "la política de la empresa no permite instaladores con ventana");
+                return d;
+            }
+            Log.Info(c.Name + ": su instalador no tiene modo silencioso: se usa su ventana");
+            ctx.Report(c.Name + ": su instalador no tiene modo silencioso; se abre su ventana para completarlo…");
+            c.Result = "Su instalador no tiene modo silencioso: completá la instalación en su ventana";
+            changed(c);
+            Interactive = true;
+            windowForInstallerOnly = true;
+            try { d = attempt(); }
+            catch (OperationCanceledByUserException) { d = new DirectAttempt(); d.NotApplicable = "cancelada"; }
+            finally { windowForInstallerOnly = false; }
+            if (!d.Handled) Interactive = false;
+            if (d.Handled && (c.Status == UpdateStatus.Instalada || c.Status == UpdateStatus.RequiereReinicio) && !string.IsNullOrEmpty(c.Result) &&
+                c.Result.IndexOf("ventana", StringComparison.OrdinalIgnoreCase) < 0)
+                c.Result = c.Result.TrimEnd('.') + " (con la ventana de su instalador: no tiene modo silencioso)";
+            return d;
         }
 
         /// <summary>APPINSTALLER_CLI_ERROR_INSTALLER_PROHIBITS_ELEVATION: el instalador no admite correr como administrador.</summary>
