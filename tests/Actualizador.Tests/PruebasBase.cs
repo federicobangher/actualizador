@@ -382,6 +382,10 @@ namespace Actualizador.Tests
             Run("auditoría: el aprovisionamiento para todos sólo toma copias de la Store", TestAprovisionaSoloDeLaStore2044);
             Run("relevamiento: una copia anterior del mismo paquete de winget dice con cuál convive (Kingston SSD Manager)", TestCopiaAnteriorDelMismoPaquete2044);
             Run("versión 2.0.44", TestVersion2044);
+            // --- 2.0.45 (Pruebas2045.cs)
+            Run("redirecciones con cookies (Epic Online Services: «demasiadas redirecciones»)", TestRedireccionesConCookies2045);
+            Run("Epic Online Services: si falla la descarga directa, la baja winget download y se verifica igual (la captura de las 20:55)", TestEosConWingetDownload2045);
+            Run("versión 2.0.45", TestVersion2045);
             Console.WriteLine();
             Console.WriteLine("Resultado: " + passed + " correctas, " + failed + " fallidas.");
             return failed == 0 ? 0 : 1;

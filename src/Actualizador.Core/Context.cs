@@ -7,7 +7,7 @@ namespace Actualizador.Core
     public static class AppInfo
     {
         public const string Name = "Actualizador";
-        public const string Version = "2.0.44";
+        public const string Version = "2.0.45";
         const string BaseTitle = "Actualizador — programas, controladores y Windows";
 
         /// <summary>

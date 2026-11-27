@@ -145,12 +145,24 @@ namespace Actualizador.Updates
         /// se podía revisar el destino final, y un salto intermedio por HTTP sin cifrar dejaba que
         /// alguien en la red eligiera el siguiente destino.
         /// </summary>
+        /// <summary>
+        /// 2.0.45 (captura del usuario, 26/11/2026 20:55): Epic Online Services 5.8.0 «Reinstalación cancelada: demasiadas redirecciones».
+        /// Su dirección de descarga (onlineservices.epicgames.com/api/cosmos/sdk/download) redirige poniendo una cookie y espera recibirla
+        /// en el salto siguiente; sin cookies vuelve a redirigir hasta agotar los saltos (winget y el navegador la guardan). Ahora cada
+        /// pedido guarda las cookies entre SUS saltos (sólo para ese pedido; cada cookie, para su dominio), se permiten hasta
+        /// <see cref="MaxHops"/> saltos y, si igual se agotan, el error dice por dónde pasó.
+        /// </summary>
+        public const int MaxHops = 12;
+
         static HttpWebResponse Send(string url, int timeoutMs, Func<Uri, bool> allowed, Action<HttpWebRequest> prepare)
         {
             var u = new Uri(url);
-            for (int hop = 0; hop <= 8; hop++)
+            var jar = new CookieContainer();
+            var path = new List<string>();
+            for (int hop = 0; hop <= MaxHops; hop++)
             {
                 var req = Create(u, timeoutMs, allowed);
+                req.CookieContainer = jar;
                 HttpWebResponse resp;
                 var sw = Stopwatch.StartNew();
                 // prepare va dentro del try: en un POST escribe el cuerpo, y eso ya conecta (y puede fallar).
@@ -173,13 +185,33 @@ namespace Actualizador.Updates
                 resp.Close();
                 if (string.IsNullOrEmpty(location)) throw new InvalidOperationException("redirección sin destino");
                 var next = new Uri(u, location);
+                path.Add(code + " " + u.Host);
                 if (!allowed(next)) throw new InvalidOperationException("redirección a un sitio no permitido: " + next.Scheme + "://" + next.Host);
                 // Un POST redirigido con 301/302/303 sigue como GET, sin cuerpo (como los navegadores);
                 // antes se volvía a mandar el formulario a la página de destino. 307/308 conservan el POST.
                 if (req.Method == "POST" && (code == 301 || code == 302 || code == 303)) prepare = null;
                 u = next;
             }
-            throw new InvalidOperationException("demasiadas redirecciones");
+            Log.Warn("Demasiadas redirecciones desde " + SafeHost(url) + ": " + string.Join(" → ", path.ToArray()) + " → " + u.Host);
+            throw new InvalidOperationException("demasiadas redirecciones (" + RedirectSummary(path, u.Host) + ")");
+        }
+
+        /// <summary>«onlineservices.epicgames.com → cdn… (x3)»: los dominios por los que pasó, sin repetir seguidos ni mostrar direcciones completas.</summary>
+        internal static string RedirectSummary(List<string> hops, string last)
+        {
+            var hosts = new List<string>();
+            var counts = new List<int>();
+            var all = new List<string>();
+            foreach (string h in hops) { int i = h.IndexOf(' '); all.Add(i >= 0 ? h.Substring(i + 1) : h); }
+            all.Add(last ?? "");
+            foreach (string h in all)
+            {
+                if (hosts.Count > 0 && hosts[hosts.Count - 1].Equals(h, StringComparison.OrdinalIgnoreCase)) { counts[counts.Count - 1]++; continue; }
+                hosts.Add(h); counts.Add(1);
+            }
+            var parts = new List<string>();
+            for (int i = 0; i < hosts.Count; i++) parts.Add(hosts[i] + (counts[i] > 1 ? " ×" + counts[i] : ""));
+            return string.Join(" → ", parts.ToArray());
         }
 
         static bool IsRedirect(HttpStatusCode c)

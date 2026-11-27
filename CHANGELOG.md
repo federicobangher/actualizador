@@ -1,5 +1,19 @@
 # Cambios
 
+## 2.0.45
+
+Captura del usuario (26/11/2026, 20:55), con la 2.0.44: Epic Online Services 5.4.0 → 5.8.0 «Falló la instalación: Reinstalación cancelada
+(no se desinstaló nada): demasiadas redirecciones». La 2.0.44 ya no se frenaba por el modo silencioso, pero no podía bajar el paquete.
+
+- **Redirecciones con cookies.** La dirección de descarga de Epic (onlineservices.epicgames.com/api/cosmos/sdk/download) redirige poniendo
+  una cookie y espera recibirla en el salto siguiente; Actualizador sigue cada salto a mano (para validar HTTPS y dominio) pero no guardaba
+  las cookies, así que volvía a redirigir hasta agotar los 8 saltos. Ahora cada pedido guarda sus cookies entre sus saltos (sólo para ese
+  pedido), se permiten 12 y, si igual se agotan, el error y el registro dicen por qué dominios pasó. Vale para todas las descargas.
+- **Si la descarga directa falla, la baja winget.** Antes de desinstalar nada, `winget download` de esa versión exacta (winget es quien baja
+  ese paquete cuando instala) en una carpeta privada; el archivo se usa sólo si coincide con el SHA-256 del catálogo, y sigue la misma
+  verificación de siempre. Si tampoco se puede, no se toca nada y la fila dice las dos causas.
+- Pruebas nuevas (Pruebas2045.cs).
+
 ## 2.0.44
 
 Diagnóstico del usuario (26/11/2026, 20:10), con la 2.0.43: «Epic Online Services 5.4.0 → 5.8.0 · Falló la instalación: la versión nueva usa

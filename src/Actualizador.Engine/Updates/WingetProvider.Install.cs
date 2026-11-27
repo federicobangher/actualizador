@@ -253,7 +253,8 @@ namespace Actualizador.Updates
                     {
                         ctx.Report(c.Name + ": la versión nueva usa otro tipo de instalador; se reinstala (primero se descarga y verifica la nueva)…");
                         string installArgs = UpgradeArgs(w, "install") + (archArg != null ? " --architecture " + archArg : "");
-                        DirectAttempt d = TryDirect(ctx, c, changed, delegate { return WingetDirect.TryReinstall(ctx, c, w, Interactive, changed, delegate { return RunUpgrade(installArgs, last, guard); }, windowForInstallerOnly); });
+                        DirectAttempt d = TryDirect(ctx, c, changed, delegate { return WingetDirect.TryReinstall(ctx, c, w, Interactive, changed, delegate { return RunUpgrade(installArgs, last, guard); }, windowForInstallerOnly,
+                                                                                    delegate(string folder, string version) { return RunUpgrade(DownloadArgs(w, version, folder), last, null); }); });
                         if (d.Handled) { changed(c); continue; }
                         directNote = d.NotApplicable;
                         Log.Info(c.Name + ": reinstalación no disponible: " + directNote);
@@ -509,6 +510,16 @@ namespace Actualizador.Updates
             if (verb == "upgrade" && Modern && WingetTable.IsUnknownVersion(w.Version)) args += " --include-unknown";
             // Lo encontrado por nombre se instala con el mismo alcance que lo instalado (si no, elevado iba «para todo el equipo»).
             if (verb == "install" && w.InstallInsteadOfUpgrade && Modern && (w.Scope == "user" || w.Scope == "machine")) args += " --scope " + w.Scope;
+            return args;
+        }
+
+        /// <summary>2.0.45: «winget download» de esa versión exacta en una carpeta (la usa la reinstalación si falla la descarga directa).</summary>
+        internal string DownloadArgs(WingetRow w, string version, string folder)
+        {
+            string args = "download --id " + ProcessRunner.QuoteArg(w.Id) + " --exact --version " + ProcessRunner.QuoteArg(version) +
+                          " --download-directory " + ProcessRunner.QuoteArg(folder) + " --accept-package-agreements --accept-source-agreements" +
+                          (Modern ? " --disable-interactivity" : "");
+            if (w.Source.Length > 0) args += " --source " + ProcessRunner.QuoteArg(w.Source);
             return args;
         }
 

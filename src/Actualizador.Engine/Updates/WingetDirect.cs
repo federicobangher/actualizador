@@ -405,6 +405,17 @@ namespace Actualizador.Updates
         public static DirectAttempt TryReinstall(UpdateContext ctx, UpdateCandidate c, WingetRow w, bool interactive,
                                                  Action<UpdateCandidate> changed, Func<ProcResult> wingetInstall, bool quietUninstall)
         {
+            return TryReinstall(ctx, c, w, interactive, changed, wingetInstall, quietUninstall, null);
+        }
+
+        /// <param name="wingetDownload">
+        /// 2.0.45: si la descarga directa falla, «winget download» de esa versión en la carpeta indicada (carpeta, versión). El archivo
+        /// se usa sólo si coincide con el SHA-256 del catálogo, igual que lo bajado directamente.
+        /// </param>
+        public static DirectAttempt TryReinstall(UpdateContext ctx, UpdateCandidate c, WingetRow w, bool interactive,
+                                                 Action<UpdateCandidate> changed, Func<ProcResult> wingetInstall, bool quietUninstall,
+                                                 Func<string, string, ProcResult> wingetDownload)
+        {
             var a = new DirectAttempt();
             if (!string.Equals(w.Source, "winget", StringComparison.OrdinalIgnoreCase))
             {
@@ -482,14 +493,32 @@ namespace Actualizador.Updates
                 ctx.Report("Descargando " + c.Name + " " + m.Version + " (" + newText + ") de " + url.Host + " antes de desinstalar la versión anterior…");
                 InstallerSupport.Progress(c, changed, "Descargando la versión nueva antes de desinstalar la anterior…");
                 int lastShown = -1;
-                Http.Download(inst.Url, file, 30 * 60 * 1000, ctx, Http.IsHttps, delegate(int pct, long bytes)
+                try
                 {
-                    if (pct >= 0 && pct == lastShown) return;
-                    lastShown = pct;
-                    string text = pct >= 0 ? pct + " %" : (bytes / 1048576) + " MB";
-                    ctx.Report("Descargando " + c.Name + "… " + text);
-                    InstallerSupport.Progress(c, changed, "Descarga de la versión nueva: " + text);
-                });
+                    Http.Download(inst.Url, file, 30 * 60 * 1000, ctx, Http.IsHttps, delegate(int pct, long bytes)
+                    {
+                        if (pct >= 0 && pct == lastShown) return;
+                        lastShown = pct;
+                        string text = pct >= 0 ? pct + " %" : (bytes / 1048576) + " MB";
+                        ctx.Report("Descargando " + c.Name + "… " + text);
+                        InstallerSupport.Progress(c, changed, "Descarga de la versión nueva: " + text);
+                    });
+                }
+                catch (OperationCanceledByUserException) { throw; }
+                catch (Exception dx)
+                {
+                    // 2.0.45: la descarga directa falló (Epic Online Services: «demasiadas redirecciones»): la baja winget, que es quien la
+                    // baja siempre, y se verifica igual.
+                    string direct = Http.Describe(dx);
+                    Log.Warn(c.Name + ": la descarga directa falló (" + direct + "); se prueba con winget download");
+                    string whyWinget;
+                    if (!DownloadWithWinget(ctx, c, changed, inst, m.Version, file, wingetDownload, out whyWinget))
+                    {
+                        InstallerSupport.Fail(c, "Reinstalación cancelada (no se desinstaló nada): no se pudo bajar la versión nueva (" + direct +
+                                                 (whyWinget != null ? "; " + whyWinget : "") + ")");
+                        return a;
+                    }
+                }
 
                 using (var hold = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
@@ -614,6 +643,47 @@ namespace Actualizador.Updates
             }
             finally { if (dir != null) BrowserProvider.TryDeleteDir(dir); }
             return a;
+        }
+
+        /// <summary>
+        /// 2.0.45: baja el instalador con «winget download» (que maneja las redirecciones y cookies de cada fabricante como cuando
+        /// winget instala) y lo copia a <paramref name="file"/> sólo si coincide con el SHA-256 del catálogo. false (con el motivo) si no.
+        /// </summary>
+        internal static bool DownloadWithWinget(UpdateContext ctx, UpdateCandidate c, Action<UpdateCandidate> changed, WingetInstaller inst, string version,
+                                                string file, Func<string, string, ProcResult> wingetDownload, out string why)
+        {
+            why = null;
+            if (wingetDownload == null) return false;
+            if (!WingetRules.IsSafeVersion(version)) { why = "winget download: versión no utilizable"; return false; }
+            string dir = null;
+            try
+            {
+                dir = BrowserProvider.NewDownloadDir();
+                ctx.Report("Bajando " + c.Name + " " + version + " con winget download…");
+                InstallerSupport.Progress(c, changed, "Descargando la versión nueva con winget…");
+                var r = wingetDownload(dir, version);
+                if (r == null || !r.Started || r.TimedOut || r.Aborted || r.ExitCode != 0)
+                {
+                    why = "winget download: " + (r == null ? "no se ejecutó" : !r.Started || r.TimedOut || r.Aborted ? r.Describe() : WingetProvider.Describe(unchecked((uint)r.ExitCode)));
+                    return false;
+                }
+                foreach (string f in Directory.GetFiles(dir, "*", SearchOption.AllDirectories))
+                {
+                    if (f.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".yml", StringComparison.OrdinalIgnoreCase)) continue;
+                    string sha;
+                    using (var fs = new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.Read)) sha = InstallerSupport.Sha256(fs);
+                    if (sha != inst.Sha256) continue;
+                    if (File.Exists(file)) File.Delete(file);
+                    File.Copy(f, file);
+                    Log.Info(c.Name + ": winget download dejó " + Path.GetFileName(f) + " (SHA-256 del catálogo)");
+                    return true;
+                }
+                why = "winget download no dejó un archivo con el SHA-256 del catálogo";
+                return false;
+            }
+            catch (OperationCanceledByUserException) { throw; }
+            catch (Exception ex) { why = "winget download: " + ex.Message; return false; }
+            finally { if (dir != null) BrowserProvider.TryDeleteDir(dir); }
         }
 
         static string MsiexecText(int code)
