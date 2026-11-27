@@ -34,7 +34,7 @@ Diseño revisado de lo nuevo:
   frente a la pantalla y con `permitirInstaladoresConVentana`; la desinstalación de la versión anterior sigue en silencio y con el programa
   abierto no se toca nada.
 
-Pendiente conocido (sin cambios): el SHA-256 de cada entrega se publica en el mismo lugar que la entrega (GitHub). Protege de descargas
+Resuelto en la 2.0.46 (firma propia con `Firmar.cmd`, ver docs/SEGURIDAD.md), activo desde la primera versión que traiga la clave pública. Era: el SHA-256 de cada entrega se publica en el mismo lugar que la entrega (GitHub). Protege de descargas
 dañadas o cortadas, no de alguien que controle la cuenta de GitHub; la defensa es firmar con un certificado de firma de código
 (`build\Sign.ps1`, `-CertificadoHuella`) y exigir la firma (`Instalar.cmd -ExigirFirma`). Lo mismo vale para la actualización sola.
 

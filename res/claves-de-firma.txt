@@ -1,0 +1,4 @@
+# Claves públicas que firman las versiones de Actualizador (2.0.46). Se compilan DENTRO del programa: cada equipo se actualiza
+# solo únicamente con versiones firmadas por una de estas claves. La privada está sólo en la PC de quien firma (Firmar.cmd).
+# Formato: identificador (16 hex: SHA-256 del módulo)  módulo-base64  exponente-base64  comentario
+# Mientras no haya ninguna, las versiones se instalan con el SHA-256 publicado, como hasta la 2.0.45.

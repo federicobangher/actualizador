@@ -49,7 +49,7 @@ if ($SiHaceFalta) {
     Write-Host "Se publica de nuevo: $motivo." -ForegroundColor Yellow
     # 2.0.44: sin el SDK no se puede compilar; Instalar.cmd usa la misma versión que GitHub ya compiló y publicó.
     if (-not $CertificadoHuella -and -not $Pfx -and -not (Use-DotNetSdk8)) {
-        if (Get-EntregaPublicada -Version $version -Salida $Salida) { exit 0 }
+        if (Get-EntregaPublicada -Version $version -Salida $Salida -Claves @(Get-ClavesDeFirma $raiz)) { exit 0 }
         Write-Host 'Queda compilarla en este equipo, con el SDK de .NET 8.' -ForegroundColor Yellow
     }
 }

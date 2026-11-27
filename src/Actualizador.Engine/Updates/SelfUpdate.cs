@@ -6,6 +6,7 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using Actualizador.Core;
+using Actualizador.Core.Security;
 
 namespace Actualizador.Updates
 {
@@ -32,8 +33,14 @@ namespace Actualizador.Updates
             public DateTime Checked;
             /// <summary>2.0.32: la entrega para instalarse sola (Actualizador-x.y.z.zip de la versión de GitHub) y su SHA-256; "" si no hay.</summary>
             public string AssetUrl = "", AssetSha256 = "", AssetName = "";
-            /// <summary>2.0.32: se puede instalar sola: GitHub publica la entrega .zip con su SHA-256.</summary>
-            public bool CanInstall { get { return Newer && AssetUrl.Length > 0 && AssetSha256.Length == 64; } }
+            /// <summary>
+            /// 2.0.46: la firma propia de la entrega es válida («Actualizador-x.y.z.zip.firma», ver <see cref="VersionSignature"/>). Si el
+            /// programa trae claves de firma, sin esto NO se instala sola (sólo se avisa). <see cref="SignatureProblem"/>: por qué no.
+            /// </summary>
+            public bool SignatureOk;
+            public string SignatureProblem = "";
+            /// <summary>2.0.32: se puede instalar sola: GitHub publica la entrega .zip con su SHA-256 (2.0.46: y firmada, si hace falta).</summary>
+            public bool CanInstall { get { return Newer && AssetUrl.Length > 0 && AssetSha256.Length == 64 && (SignatureOk || !VersionSignature.Required); } }
         }
 
         /// <summary>
@@ -115,6 +122,29 @@ namespace Actualizador.Updates
 
         /// <summary>Sólo para las pruebas: la dirección final de «/releases/latest» (repo → dirección), y el contenido de un .sha256.</summary>
         internal static Func<string, string> LatestForTests, ShaForTests;
+        /// <summary>Sólo para las pruebas: el contenido de un .firma (dirección → texto; null = no está publicado).</summary>
+        internal static Func<string, string> FirmaForTests;
+
+        /// <summary>
+        /// 2.0.46: lee «&lt;entrega&gt;.firma» y la verifica contra ese archivo, esa versión y ese SHA-256. true si es válida; si no, el
+        /// motivo. Se usa al consultar y otra vez justo antes de instalar (con el SHA-256 de lo bajado), así que lo guardado en
+        /// version_nueva.json no decide nada.
+        /// </summary>
+        public static bool CheckSignature(string assetUrl, string asset, string version, string sha256, out string why)
+        {
+            why = null;
+            string text;
+            try { text = FirmaForTests != null ? FirmaForTests(assetUrl + VersionSignature.Extension) : Http.GetString(assetUrl + VersionSignature.Extension, 20000, GitHubRules.IsDownload, "*/*"); }
+            catch (HttpFailureException hf)
+            {
+                if (hf.StatusCode == 404) { why = "todavía no está firmada (se firma con Firmar.cmd)"; return false; }
+                why = "no se pudo leer su firma (" + Http.Describe(hf) + ")";
+                return false;
+            }
+            catch (Exception ex) { why = "no se pudo leer su firma (" + Http.Describe(ex) + ")"; return false; }
+            if (text == null) { why = "todavía no está firmada (se firma con Firmar.cmd)"; return false; }
+            return VersionSignature.Verify(text, asset, version, sha256, out why);
+        }
 
         /// <summary>
         /// 2.0.34: la etiqueta de la última versión, por la redirección de «github.com/REPO/releases/latest» a «…/releases/tag/ETIQUETA» (sin
@@ -206,6 +236,13 @@ namespace Actualizador.Updates
                         if (h.Success) { r.AssetUrl = assetUrl; r.AssetName = asset; r.AssetSha256 = h.Groups["h"].Value.ToLowerInvariant(); }
                     }
                     catch (Exception ex) { Log.Info("Versión nueva: sin " + asset + ".sha256 (" + Http.Describe(ex) + "): sólo se avisa"); }
+                    if (r.AssetSha256.Length == 64 && VersionSignature.Required && VersionUtil.IsNewer(r.Latest, current))
+                    {
+                        string why;
+                        r.SignatureOk = CheckSignature(assetUrl, asset, r.Latest, r.AssetSha256, out why);
+                        r.SignatureProblem = r.SignatureOk ? "" : why ?? "";
+                        if (!r.SignatureOk) Log.Warn("Versión nueva " + r.Latest + ": no se instala sola: " + r.SignatureProblem);
+                    }
                 }
                 else if (kind == SourceKind.Folder)
                 {
@@ -254,6 +291,8 @@ namespace Actualizador.Updates
                 d["archivo"] = r.AssetUrl ?? "";
                 d["nombreArchivo"] = r.AssetName ?? "";
                 d["sha256"] = r.AssetSha256 ?? "";
+                d["firmada"] = r.SignatureOk;
+                d["problemaFirma"] = r.SignatureProblem ?? "";
                 // 2.0.38: quién consultó (versión y si es la portable): la consulta de otra versión no se reusa (ver Load).
                 d["consultadaPor"] = Consultant;
                 if (r.Error != null) d["error"] = r.Error;
@@ -284,6 +323,9 @@ namespace Actualizador.Updates
                 r.AssetUrl = Json.Str(o, "archivo") ?? "";
                 r.AssetName = Json.Str(o, "nombreArchivo") ?? "";
                 r.AssetSha256 = Json.Str(o, "sha256") ?? "";
+                // 2.0.46: sólo para mostrar; antes de instalar se vuelve a bajar y verificar la firma (SelfInstall.Stage).
+                r.SignatureOk = string.Equals(Json.Str(o, "firmada") ?? "", "true", StringComparison.OrdinalIgnoreCase);
+                r.SignatureProblem = Json.Str(o, "problemaFirma") ?? "";
                 r.Error = Json.Str(o, "error");
                 r.Newer = r.Latest.Length > 0 && VersionUtil.IsNewer(r.Latest, current);
                 return r;
@@ -309,6 +351,7 @@ namespace Actualizador.Updates
         {
             if (r == null || !r.Newer) return null;
             return "Hay una versión nueva de Actualizador: la " + r.Latest + " (esta es la " + AppInfo.Version + "). Está en " + r.Where + ". " +
+                   (!string.IsNullOrEmpty(r.SignatureProblem) && !r.SignatureOk ? "No se instala sola: " + r.SignatureProblem + ". " : "") +
                    HowToUpdate(AppInfo.IsPortable, r.Where);
         }
 

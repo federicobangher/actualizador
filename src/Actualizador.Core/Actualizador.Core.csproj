@@ -15,4 +15,8 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Actualizador.Tests" />
   </ItemGroup>
+  <!-- 2.0.46: las claves públicas que firman las versiones, compiladas adentro (ver Security\VersionSignature.cs y build\Firmar.ps1). -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\res\claves-de-firma.txt" LogicalName="claves-de-firma.txt" />
+  </ItemGroup>
 </Project>

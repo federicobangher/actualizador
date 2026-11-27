@@ -1,5 +1,24 @@
 # Cambios
 
+## 2.0.46
+
+Pedido del usuario (26/11/2026), sobre lo pendiente de la auditoría de la 2.0.44: que alguien que entre a la cuenta de GitHub no pueda
+colar una versión falsa. Eligió la firma propia, gratis (el servicio de Microsoft no está disponible para personas de Argentina; un
+certificado comercial cuesta y pide licencia de código abierto).
+
+- **Las versiones se firman en tu PC, con una clave que nunca sube a GitHub.** `Firmar.cmd` (doble clic): la primera vez crea la clave
+  (RSA de 3072 bits, en el almacén de certificados de Windows, con contraseña), guarda un respaldo `.pfx` con contraseña para un pendrive y
+  sube la clave PÚBLICA al proyecto (`res/claves-de-firma.txt`). En cada versión muestra cuál es y quién la publicó, pregunta, baja las
+  entregas, comprueba su SHA-256, las firma, verifica cada firma y sube `<entrega>.firma` al lado de cada una.
+- **Los equipos sólo se actualizan solos con versiones firmadas**, en cuanto el programa trae una clave pública (compilada adentro, no un
+  archivo que se pueda cambiar). La firma se verifica al buscar la versión nueva y otra vez justo antes de instalar, contra lo bajado.
+  Sin firma válida, la versión nueva sólo se avisa y el aviso dice por qué. Esta 2.0.46 todavía no trae ninguna clave: funciona como
+  antes hasta la primera versión que traiga la tuya.
+- `Instalar.cmd` sin el SDK (2.0.44) también exige la firma si el código trae claves.
+- GitHub prueba la firma en cada publicación con una clave de prueba (que borra al terminar): lo que firma Windows PowerShell 5.1 tiene
+  que aceptarlo el programa.
+- Pruebas nuevas (Pruebas2046.cs).
+
 ## 2.0.45
 
 Captura del usuario (26/11/2026, 20:55), con la 2.0.44: Epic Online Services 5.4.0 → 5.8.0 «Falló la instalación: Reinstalación cancelada

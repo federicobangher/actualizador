@@ -224,7 +224,7 @@ function Get-MotivoParaPublicar([string]$Raiz, [string]$Salida, [string]$Version
 # versión ya publicada y se instala esa. Sólo de github.com/<repo>/releases por HTTPS; el .zip tiene que coincidir con el SHA-256 publicado
 # a su lado, no puede traer rutas que salgan de su carpeta, el Actualizador.exe de adentro tiene que ser de esta versión y cada archivo
 # tiene que coincidir con su SHA256SUMS.txt (Install-Actualizador.ps1 lo vuelve a verificar antes de copiar). Devuelve $true si quedó en $Salida.
-function Get-EntregaPublicada([string]$Version, [string]$Salida, [string]$Repo = 'federicobangher/actualizador') {
+function Get-EntregaPublicada([string]$Version, [string]$Salida, [string]$Repo = 'federicobangher/actualizador', [object[]]$Claves = @()) {
     $ErrorActionPreference = 'Stop'   # sólo dentro de la función: cualquier falla corta y se informa abajo
     if ($Version -notmatch '^\d{1,4}(\.\d{1,6}){2,3}$') { return $false }
     if ($Repo -notmatch '^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}$') { return $false }
@@ -246,6 +246,14 @@ function Get-EntregaPublicada([string]$Version, [string]$Salida, [string]$Repo =
         $real = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
         if ($real -ne $esperado) { throw "$nombre no coincide con el SHA-256 publicado (llegó $real)" }
         Write-Host "SHA-256 verificado: $real"
+        # 2.0.46: si el código trae claves de firma, la entrega tiene que estar firmada (Firmar.cmd) con una de ellas.
+        if (@($Claves).Count -gt 0) {
+            $textoFirma = ''
+            try { $textoFirma = [string]$wc.DownloadString($base + "$nombre.firma") } catch { throw "la versión $Version todavía no está firmada (Firmar.cmd)" }
+            $problema = Test-FirmaEntrega -Texto $textoFirma -Archivo $nombre -Version $Version -Sha256 $real -Claves $Claves
+            if ($problema) { throw "firma: $problema" }
+            Write-Host 'Firma verificada.'
+        }
 
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         $z = [IO.Compression.ZipFile]::OpenRead($zip)
@@ -292,6 +300,71 @@ function Get-EntregaPublicada([string]$Version, [string]$Salida, [string]$Repo =
     } finally {
         if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue }
     }
+}
+
+# 2.0.46: firma propia de las versiones (ver src\Actualizador.Core\Security\VersionSignature.cs, que hace lo mismo en el programa).
+# Las claves públicas de confianza: res\claves-de-firma.txt («identificador módulo-base64 exponente-base64 comentario»).
+function Get-IdClave([byte[]]$Modulo) {
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try { return ([BitConverter]::ToString($sha.ComputeHash($Modulo)).Replace('-', '').Substring(0, 16).ToLowerInvariant()) } finally { $sha.Dispose() }
+}
+
+function Get-ClavesDeFirma([string]$Raiz) {
+    $claves = New-Object System.Collections.ArrayList
+    $f = Join-Path $Raiz 'res\claves-de-firma.txt'
+    if (-not (Test-Path -LiteralPath $f -PathType Leaf)) { return $claves.ToArray() }
+    foreach ($l in [IO.File]::ReadAllLines($f)) {
+        $t = $l.Trim()
+        if (-not $t -or $t.StartsWith('#')) { continue }
+        if ($t -notmatch '^([0-9a-f]{16})\s+([A-Za-z0-9+/=]{300,1100})\s+([A-Za-z0-9+/=]{2,12})(\s|$)') { continue }
+        $id = $Matches[1]
+        $mod = [Convert]::FromBase64String($Matches[2]); $exp = [Convert]::FromBase64String($Matches[3])
+        if ($mod.Length -lt 384 -or (Get-IdClave $mod) -ne $id) { continue }
+        [void]$claves.Add(@{ Id = $id; Modulo = $mod; Exponente = $exp })
+    }
+    return $claves.ToArray()
+}
+
+function Get-MensajeFirma([string]$Archivo, [string]$Version, [string]$Sha256) {
+    return 'Actualizador|1|' + $Archivo.Trim() + '|' + $Version.Trim() + '|' + $Sha256.Trim().ToLowerInvariant()
+}
+
+# $null si la firma es válida, de una de $Claves, de ESE archivo, versión y SHA-256; si no, el motivo.
+function Test-FirmaEntrega([string]$Texto, [string]$Archivo, [string]$Version, [string]$Sha256, [object[]]$Claves) {
+    if (@($Claves).Count -eq 0) { return 'no hay claves de firma' }
+    if (-not $Texto -or $Texto.Length -gt 8192) { return 'la firma está vacía o no tiene el formato' }
+    $lineas = $Texto.TrimStart([char]0xFEFF).Replace("`r", '').Split("`n")
+    if ($lineas[0].Trim() -ne 'Actualizador firma de versión 1') { return 'la firma no tiene el formato de Actualizador' }
+    $f = @{}
+    for ($i = 1; $i -lt $lineas.Length; $i++) {
+        $l = $lineas[$i].Trim()
+        if (-not $l) { continue }
+        $c = $l.IndexOf(':')
+        if ($c -le 0) { return 'la firma no tiene el formato de Actualizador' }
+        $k = $l.Substring(0, $c).Trim()
+        if ($f.ContainsKey($k)) { return "la firma repite «$k»" }
+        $f[$k] = $l.Substring($c + 1).Trim()
+    }
+    foreach ($k in @('archivo', 'version', 'sha256', 'clave', 'firma')) { if (-not $f.ContainsKey($k)) { return 'a la firma le faltan datos' } }
+    $sha = $Sha256.Trim().ToLowerInvariant()
+    if ($sha -notmatch '^[0-9a-f]{64}$' -or $f['sha256'].ToLowerInvariant() -ne $sha) { return 'la firma es de otro archivo (otro SHA-256)' }
+    if ($f['archivo'] -ne $Archivo.Trim()) { return "la firma es de otro archivo («$($f['archivo'])»)" }
+    if ($f['version'] -cne $Version.Trim()) { return "la firma es de otra versión ($($f['version']))" }
+    $clave = $null
+    foreach ($c2 in @($Claves)) { if ($c2.Id -eq $f['clave'].ToLowerInvariant()) { $clave = $c2 } }
+    if (-not $clave) { return "la firma es de una clave que no se reconoce ($($f['clave']))" }
+    try { $bytes = [Convert]::FromBase64String($f['firma']) } catch { return 'la firma no es base64 válido' }
+    if ($bytes.Length -ne $clave.Modulo.Length) { return 'la firma no corresponde a la clave' }
+    $rsa = New-Object Security.Cryptography.RSACryptoServiceProvider
+    try {
+        $p = New-Object Security.Cryptography.RSAParameters
+        $p.Modulus = $clave.Modulo
+        $p.Exponent = $clave.Exponente
+        $rsa.ImportParameters($p)
+        $datos = [Text.Encoding]::UTF8.GetBytes((Get-MensajeFirma $Archivo $Version $sha))
+        if (-not $rsa.VerifyData($datos, 'SHA256', $bytes)) { return 'la firma NO es válida (el archivo o la firma fueron alterados)' }
+    } finally { $rsa.Dispose() }
+    return $null
 }
 
 # 7z.exe de 7-Zip (para comprimir en .7z), o $null si no está instalado. Primero la ruta que 7-Zip deja en el registro.

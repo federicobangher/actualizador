@@ -57,7 +57,7 @@ Con el código fuente, `Instalar.cmd` en un equipo sin el SDK baja esa misma ver
 ```
 powershell -ExecutionPolicy Bypass -File build\Build.ps1         # compila y corre las pruebas
 powershell -ExecutionPolicy Bypass -File build\Publish.ps1       # publish\Actualizador (con .NET adentro)
-powershell -ExecutionPolicy Bypass -File build\Empaquetar.ps1    # dist\Actualizador-2.0.45.7z para los equipos (.zip sin 7-Zip)
+powershell -ExecutionPolicy Bypass -File build\Empaquetar.ps1    # dist\Actualizador-2.0.46.7z para los equipos (.zip sin 7-Zip)
 Instalar.cmd                                                     # publica (si hace falta) e instala en este equipo
 Instalar.cmd /quitar                                             # desinstala (también: Configuración › Aplicaciones, o Más › Desinstalar)
 Publicar.cmd                                                     # publica esta versión en GitHub: los equipos se actualizan solos
@@ -68,14 +68,20 @@ una versión que todavía no está publicada (`.github/workflows/publicar.yml`, 
 equipo con la 2.0.32 o posterior la encuentra al abrir Actualizador, la baja, verifica su SHA-256, la instala en silencio y se vuelve a
 abrir. La portable también, desde la 2.0.37: copia los archivos nuevos en su carpeta sin tocar «Datos».
 
-Firma de código: `build\Publish.ps1 -CertificadoHuella <huella>` (o `-Pfx archivo.pfx`).
+**Firma de las versiones (2.0.46):** después de que GitHub publica una versión, `Firmar.cmd` (doble clic, en tu PC) la firma con tu clave,
+que nunca sube a GitHub. Desde que el programa trae tu clave pública (`res\claves-de-firma.txt`, compilada adentro), cada equipo se
+actualiza solo **únicamente** con versiones firmadas: alguien que entre a la cuenta de GitHub no puede colar una versión falsa. Hasta que
+la firmes, la versión nueva sólo se avisa. La primera vez `Firmar.cmd` crea la clave (con contraseña), guarda un respaldo `.pfx` para un
+pendrive y sube la clave pública al proyecto.
+
+Firma de código con un certificado comercial (Authenticode): `build\Publish.ps1 -CertificadoHuella <huella>` (o `-Pfx archivo.pfx`).
 
 ## Versión portable
 
 Además de la que se instala, una que **no se instala**: para llevar en un pendrive y usar equipo por equipo.
 
 ```
-Portable.cmd                                                     # dist\Actualizador-2.0.45-portable.7z (o .zip sin 7-Zip)
+Portable.cmd                                                     # dist\Actualizador-2.0.46-portable.7z (o .zip sin 7-Zip)
 powershell -ExecutionPolicy Bypass -File build\EmpaquetarPortable.ps1 -CertificadoHuella <huella>   # firmada
 ```
 

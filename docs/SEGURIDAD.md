@@ -88,6 +88,14 @@ cambios es la evidencia para auditorías.
   `-ExigirFirma`, exige firma Authenticode válida en los ejecutables.
 - `build\Sign.ps1` firma con SHA-256 y sello de tiempo RFC 3161; con `-CertificadoHuella` la clave privada no sale del
   almacén de certificados ni del token.
+- **Firma propia de las versiones (2.0.46).** GitHub compila y publica; la actualización sola exige además `<entrega>.firma`: RSA de
+  3072 bits, PKCS#1 v1.5 con SHA-256, sobre «Actualizador|1|archivo|versión|sha256» (ata el archivo a su nombre y su versión: no sirve para
+  hacer pasar una versión vieja por nueva ni un archivo por otro). La clave privada está sólo en la PC de quien firma (almacén de
+  certificados de Windows, con contraseña, respaldo `.pfx` aparte); las públicas de confianza están compiladas dentro del programa
+  (`res\claves-de-firma.txt` como recurso), no en un archivo al lado del ejecutable. La firma se verifica al consultar y otra vez justo
+  antes de instalar, contra el SHA-256 de lo bajado (lo guardado en `version_nueva.json` no decide). `Instalar.cmd` sin SDK también la exige.
+  Límite: una instalación NUEVA hecha desde una copia sacada de un GitHub ya comprometido no tiene contra qué comparar; los equipos ya
+  instalados, sí. Si se pierde la clave y su respaldo, los equipos sólo se pueden pasar a una clave nueva instalando a mano.
 
 ## Reportar un problema de seguridad
 

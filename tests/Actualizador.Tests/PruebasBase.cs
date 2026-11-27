@@ -386,6 +386,13 @@ namespace Actualizador.Tests
             Run("redirecciones con cookies (Epic Online Services: «demasiadas redirecciones»)", TestRedireccionesConCookies2045);
             Run("Epic Online Services: si falla la descarga directa, la baja winget download y se verifica igual (la captura de las 20:55)", TestEosConWingetDownload2045);
             Run("versión 2.0.45", TestVersion2045);
+            // --- 2.0.46 (Pruebas2046.cs)
+            Run("firma propia de las versiones: formato, claves y lo que se rechaza", TestFirmaDeVersiones2046);
+            Run("lo que firma Windows PowerShell (Firmar.cmd) lo acepta el programa", TestFirmaDePowerShell2046);
+            Run("con claves en el programa, sólo se instala sola una versión firmada", TestActualizacionSoloFirmada2046);
+            Run("antes de instalar, la firma se verifica contra lo bajado", TestInstalaSoloLoFirmado2046);
+            Run("Firmar.cmd y sus guiones arman lo mismo que verifica el programa", TestGuionesDeFirma2046);
+            Run("versión 2.0.46", TestVersion2046);
             Console.WriteLine();
             Console.WriteLine("Resultado: " + passed + " correctas, " + failed + " fallidas.");
             return failed == 0 ? 0 : 1;

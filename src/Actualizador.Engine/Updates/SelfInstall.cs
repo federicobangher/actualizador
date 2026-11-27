@@ -87,6 +87,16 @@ namespace Actualizador.Updates
                 using (var f = new FileStream(zip, FileMode.Open, FileAccess.Read, FileShare.Read)) got = InstallerSupport.Sha256(f);
                 if (!got.Equals(r.AssetSha256, StringComparison.OrdinalIgnoreCase))
                 { error = "el SHA-256 de lo bajado no coincide con el publicado: no se instala"; return null; }
+                // 2.0.46: con claves de firma en el programa, la firma se vuelve a bajar y verificar contra lo bajado (no contra lo que
+                // dice version_nueva.json): sin una firma válida de esa versión, de ese archivo y de ese contenido, no se instala nada.
+                if (Actualizador.Core.Security.VersionSignature.Required)
+                {
+                    string why;
+                    string asset = r.AssetName.Length > 0 ? r.AssetName : SelfUpdate.AssetNameFor(r.Latest, portable);
+                    if (!SelfUpdate.CheckSignature(r.AssetUrl, asset, r.Latest, got, out why)) { error = "no se instala: " + why; return null; }
+                    if (report != null) report("Firma de Actualizador " + r.Latest + " verificada.");
+                    Log.Info("Versión nueva " + r.Latest + ": firma verificada (" + asset + ")");
+                }
                 string target = Path.Combine(dir, "entrega");
                 Directory.CreateDirectory(target);
                 if (!Extract(zip, target, out error)) return null;

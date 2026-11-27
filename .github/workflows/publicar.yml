@@ -61,6 +61,38 @@ jobs:
           "publicada=$($ya.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           exit 0
 
+      # 2.0.46: la firma propia de las versiones (Firmar.cmd): se crea una clave de PRUEBA (sin contraseña, se borra al final), se firma,
+      # se verifica con los guiones y se deja el resultado para que las pruebas del programa (VersionSignature) lo verifiquen también:
+      # así se comprueba que lo que firma Windows PowerShell 5.1 lo acepta Actualizador.
+      - name: Firma de versiones (clave de prueba)
+        shell: powershell
+        run: |
+          . .\build\Comun.ps1
+          . .\build\Firma.ps1
+          $cert = New-ClaveDeFirma -Nombre $NombreClavePrueba -SinContrasena
+          try {
+            $sha = ('ab' * 32)
+            $texto = New-TextoFirma -Cert $cert -Archivo 'Actualizador-9.9.9.zip' -Version '9.9.9' -Sha256 $sha
+            $linea = Get-LineaClavePublica $cert
+            $dir = Join-Path $env:RUNNER_TEMP 'firma-prueba'
+            New-Item -ItemType Directory -Path (Join-Path $dir 'res') -Force | Out-Null
+            [IO.File]::WriteAllText((Join-Path $dir 'res\claves-de-firma.txt'), "# prueba`r`n$linea`r`n")
+            $claves = @(Get-ClavesDeFirma $dir)
+            if ($claves.Count -ne 1) { throw 'Get-ClavesDeFirma no leyó la clave' }
+            $p = Test-FirmaEntrega -Texto $texto -Archivo 'Actualizador-9.9.9.zip' -Version '9.9.9' -Sha256 $sha -Claves $claves
+            if ($p) { throw "la firma válida no verificó: $p" }
+            if (-not (Test-FirmaEntrega -Texto $texto -Archivo 'Actualizador-9.9.9.zip' -Version '9.9.8' -Sha256 $sha -Claves $claves)) { throw 'aceptó otra versión' }
+            if (-not (Test-FirmaEntrega -Texto $texto -Archivo 'Actualizador-9.9.9.zip' -Version '9.9.9' -Sha256 ('cd' * 32) -Claves $claves)) { throw 'aceptó otro SHA-256' }
+            $m = [regex]::Match($texto, 'firma: (\S+)')
+            $b = [Convert]::FromBase64String($m.Groups[1].Value); $b[10] = $b[10] -bxor 1
+            $alterado = $texto.Replace($m.Groups[1].Value, [Convert]::ToBase64String($b))
+            if (-not (Test-FirmaEntrega -Texto $alterado -Archivo 'Actualizador-9.9.9.zip' -Version '9.9.9' -Sha256 $sha -Claves $claves)) { throw 'aceptó una firma alterada' }
+            [IO.File]::WriteAllText((Join-Path $dir 'linea.txt'), $linea)
+            [IO.File]::WriteAllText((Join-Path $dir 'firma.txt'), $texto)
+            "ACTUALIZADOR_FIRMA_PRUEBA=$dir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+            Write-Host 'Firma de prueba: correcta.'
+          } finally { Remove-Item -LiteralPath ('Cert:\CurrentUser\My\' + $cert.Thumbprint) -DeleteKey -ErrorAction SilentlyContinue }
+
       # 2.0.44: Instalar.cmd del código fuente, en un equipo sin el SDK de .NET 8, baja la versión ya publicada (Get-EntregaPublicada).
       # Se prueba de verdad con la última publicada: descarga, SHA-256, contenido y SHA256SUMS.txt.
       - name: Instalar.cmd sin SDK (bajar y verificar la última versión publicada)
